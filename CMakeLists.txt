@@ -15,12 +15,16 @@ if (NOT Boost_FOUND)
     FetchContent_MakeAvailable(boost)
 endif()
 
+add_subdirectory(include/SocketWrapper)
+
 add_executable(IMAP_server src/main.cpp)
 
 target_link_libraries(IMAP_server PRIVATE
+    SocketWrapper
     Boost::system
 )
 
 target_include_directories(IMAP_server PRIVATE
+    ${CMAKE_SOURCE_DIR}/include/SocketWrapper/include
     ${Boost_INCLUDE_DIRS}
 )
