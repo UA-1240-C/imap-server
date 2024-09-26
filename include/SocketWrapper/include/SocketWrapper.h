@@ -1,0 +1,4 @@
+#ifndef SOCKET_WRAPPER_H
+#define SOCKET_WRAPPER_H
+
+#endif // SOCKET_WRAPPER_H
