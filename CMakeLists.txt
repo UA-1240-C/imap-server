@@ -4,7 +4,9 @@ project(IMAP_server VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Boost REQUIRED system)
+find_package(Boost REQUIRED COMPONENTS system log log_setup)
+
+include(FetchContent)
 
 if (NOT Boost_FOUND)
     FetchContent_Declare(
@@ -15,16 +17,35 @@ if (NOT Boost_FOUND)
     FetchContent_MakeAvailable(boost)
 endif()
 
+FetchContent_Declare(googletest
+	GIT_REPOSITORY https://github.com/google/googletest
+	GIT_TAG v1.15.0)
+FetchContent_GetProperties(googletest)
+if(NOT googletest_POPULATED)
+    FetchContent_Populate(googletest)
+    add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BUILD_DIR})
+endif()
+
 add_subdirectory(include/SocketWrapper)
+add_subdirectory(include/Logger)
+add_subdirectory(include/Parser)
+add_subdirectory(include/Utils)
 
 add_executable(IMAP_server src/main.cpp)
 
 target_link_libraries(IMAP_server PRIVATE
     SocketWrapper
+    Parser
+    Logger
+    Utils
     Boost::system
+    Boost::log
 )
 
 target_include_directories(IMAP_server PRIVATE
     ${CMAKE_SOURCE_DIR}/include/SocketWrapper/include
+    ${CMAKE_SOURCE_DIR}/include/Utils/include
+    ${CMAKE_SOURCE_DIR}/include/Parser/include
+    ${CMAKE_SOURCE_DIR}/include/Logger/include
     ${Boost_INCLUDE_DIRS}
 )
