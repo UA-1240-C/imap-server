@@ -3,6 +3,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include "Logger.h"
 
 using TcpSocket = boost::asio::ip::tcp::socket;
 using TcpSocketPtr = std::shared_ptr<TcpSocket>;

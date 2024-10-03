@@ -1,0 +1,30 @@
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogToConsoleProd_Test::TestBody(void)] This is a production log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogToConsoleDebug_Test::TestBody(void)] This is a debug log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogToConsoleTrace_Test::TestBody(void)] This is a trace log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogToConsoleWarning_Test::TestBody(void)] This is a warning log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogToConsoleError_Test::TestBody(void)] This is an error log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogEmptyMessage_Test::TestBody(void)] 
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogErrorColor_Test::TestBody(void)] Error occurred
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogTraceColor_Test::TestBody(void)] Trace message
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_MultipleLogLevels_Test::TestBody(void)] Production log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_MultipleLogLevels_Test::TestBody(void)] Debug log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_MultipleLogLevels_Test::TestBody(void)] Warning log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_MultipleLogLevels_Test::TestBody(void)] Error log
+21760 - 2024-Sep-17 14:29:27 [Debug] - [auto __cdecl LoggerTest_MutexLockDuringLogging_Test::TestBody::<lambda_1>::operator ()(void) const] Thread 1 log
+23052 - 2024-Sep-17 14:29:27 [Debug] - [auto __cdecl LoggerTest_MutexLockDuringLogging_Test::TestBody::<lambda_2>::operator ()(void) const] Thread 2 log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_MutexLockDuringLogging_Test::TestBody(void)] Log after threads
+21452 - 2024-Sep-17 14:29:27 [] - [void __cdecl LoggerTest_NoLogsOutput_Test::TestBody(void)] This message should not appear
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogOutputFormat_Test::TestBody(void)] Test log message
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogLevelFilterDebug_Test::TestBody(void)] This trace log should not appear
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogLevelFilterDebug_Test::TestBody(void)] This debug log should appear
+21452 - 2024-Sep-17 14:29:27 [Prod/Warning/Error] - [void __cdecl LoggerTest_LogLevelFilterProd_Test::TestBody(void)] This trace log should not appear
+21452 - 2024-Sep-17 14:29:27 [Prod/Warning/Error] - [void __cdecl LoggerTest_LogLevelFilterProd_Test::TestBody(void)] This debug log should not appear
+21452 - 2024-Sep-17 14:29:27 [Prod/Warning/Error] - [void __cdecl LoggerTest_LogLevelFilterProd_Test::TestBody(void)] This prod log should appear
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LoggerFlush_Test::TestBody(void)] This should be flushed immediately
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LoggerFlush_Test::TestBody(void)] This should flush as well
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_ResetRemovesSinks_Test::TestBody(void)] This should work after reset
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogToSyslog_Test::TestBody(void)] System log test
+10604 - 2024-Sep-17 14:29:27 [Debug] - [auto __cdecl LoggerTest_ConcurrentThreadLocalLogger_Test::TestBody::<lambda_1>::operator ()(void) const] Thread 1 log
+9688 - 2024-Sep-17 14:29:27 [Debug] - [auto __cdecl LoggerTest_ConcurrentThreadLocalLogger_Test::TestBody::<lambda_2>::operator ()(void) const] Thread 2 log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_ConcurrentThreadLocalLogger_Test::TestBody(void)] Main thread log
+21452 - 2024-Sep-17 14:29:27 [Debug] - [void __cdecl LoggerTest_LogMessageLengthLimit_Test::TestBody(void)] AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
