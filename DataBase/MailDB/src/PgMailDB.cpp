@@ -584,6 +584,55 @@ void PgMailDB::AddFolder(const std::string_view folder_name)
     }    
 }
 
+void PgMailDB::RenameFolder(const std::string_view current_folder_name, const std::string_view new_folder_name)
+{
+    PgConnection conn(*m_connection_pool);
+    pqxx::work transaction(*conn);
+
+    try
+    {
+        if(FolderExists(current_folder_name) && !FolderExists(new_folder_name))
+        {
+            transaction.exec_params(
+                "UPDATE \"folders\" "
+                "SET folder_name = $1 "
+                "WHERE folder_name = $2 AND user_id = $3",
+                new_folder_name,
+                current_folder_name,
+                m_user_id
+            );
+
+            transaction.commit();
+        }
+        else
+        {
+            throw MailException("Mentioned folder doesn't exists OR new folder name already used");
+        }
+    }
+    catch(const std::exception& e)
+    {
+        throw MailException(e.what());
+    }
+}
+
+bool PgMailDB::FolderExists(const std::string_view folder_name)
+{
+    PgConnection conn(*m_connection_pool);
+    pqxx::work transaction(*conn);
+
+    try
+    {
+        pqxx::result result = transaction.exec_params("SELECT * FROM \"folders\" WHERE folder_name = $1 AND user_id = $2"
+                                                     , folder_name, m_user_id);
+
+        return !result.empty();
+    }
+    catch(const std::exception& e)
+    {
+        throw MailException(e.what());
+    }
+}
+
 void PgMailDB::AddMessageToFolder(const std::string_view folder_name, const Mail& message)
 {
     PgConnection conn(*m_connection_pool);

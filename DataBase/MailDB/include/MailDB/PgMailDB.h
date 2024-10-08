@@ -93,6 +93,8 @@ public:
     void DeleteUser(const std::string_view user_name, const std::string_view password) override;
 
     void AddFolder(const std::string_view folder_name) override;
+    void RenameFolder(const std::string_view current_folder_name, const std::string_view new_folder_name) override;
+    bool FolderExists(const std::string_view folder_name) override;
     void AddMessageToFolder(const std::string_view folder_name, const Mail& message) override;
     void MoveMessageToFolder(const std::string_view from, const std::string_view to, const Mail& message) override;
     void FlagMessage(const std::string_view flag_name, const Mail& message) override;

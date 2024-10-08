@@ -340,6 +340,8 @@ public:
 
     
     virtual void AddFolder(const std::string_view folder_name) = 0;
+    virtual void RenameFolder(const std::string_view current_folder_name, const std::string_view new_folder_name) = 0;
+    virtual bool FolderExists(const std::string_view folder_name) = 0;
     virtual void AddMessageToFolder(const std::string_view folder_name, const Mail& message) = 0;
     virtual void MoveMessageToFolder(const std::string_view from, const std::string_view to, const Mail& message) = 0;
     virtual void FlagMessage(const std::string_view flag_name, const Mail& message) = 0;
