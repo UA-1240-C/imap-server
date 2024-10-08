@@ -2,11 +2,13 @@
 #define SERVER_H
 
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 #include <chrono>
 
 #include "ISocketWrapper.h"
-#include "TcpSocketWrapper.h"
+#include "JSONParser.h"
 #include "ServerConfig.h"
+#include "TcpSocketWrapper.h"
 #include "ThreadPool.h"
 
 using boost::asio::ip::tcp;
@@ -17,7 +19,7 @@ class Server
 {
 public:
     Server(boost::asio::io_context& io_context, boost::asio::ssl::context& ssl_context);
-    ~Server();
+    ~Server() = default;
 
     void Start();
 
@@ -29,7 +31,7 @@ protected:
 private:
     std::string m_server_name;
     std::string m_server_display_name;
-    uint8_t m_port;
+    uint16_t m_port;
     std::string m_server_ip;
 
     uint8_t m_max_threads;
