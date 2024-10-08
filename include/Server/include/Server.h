@@ -7,6 +7,7 @@
 #include "ISocketWrapper.h"
 #include "TcpSocketWrapper.h"
 #include "ServerConfig.h"
+#include "JSONParser.h"
 #include "ThreadPool.h"
 
 using boost::asio::ip::tcp;
@@ -17,7 +18,7 @@ class Server
 {
 public:
     Server(boost::asio::io_context& io_context, boost::asio::ssl::context& ssl_context);
-    ~Server();
+    ~Server() = default;
 
     void Start();
 

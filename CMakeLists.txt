@@ -30,6 +30,8 @@ add_subdirectory(include/SocketWrapper)
 add_subdirectory(include/Logger)
 add_subdirectory(include/Parser)
 add_subdirectory(include/Utils)
+add_subdirectory(include/Server)
+add_subdirectory(include/Server/include/ClientSession)
 
 add_executable(IMAP_server src/main.cpp)
 
@@ -37,7 +39,9 @@ target_link_libraries(IMAP_server PRIVATE
     SocketWrapper
     Parser
     Logger
+    Server
     Utils
+    ClientSession
     Boost::system
     Boost::log
 )
@@ -47,5 +51,7 @@ target_include_directories(IMAP_server PRIVATE
     ${CMAKE_SOURCE_DIR}/include/Utils/include
     ${CMAKE_SOURCE_DIR}/include/Parser/include
     ${CMAKE_SOURCE_DIR}/include/Logger/include
+    ${CMAKE_SOURCE_DIR}/include/Server/include
+    ${CMAKE_SOURCE_DIR}/include/Server/include/ClientSession/include
     ${Boost_INCLUDE_DIRS}
 )

@@ -5,9 +5,16 @@ target_link_libraries(Server PRIVATE
     Boost::log_setup
 )
 
+
 target_include_directories(Server PUBLIC
         ${CMAKE_SOURCE_DIR}/include/Server/include
+        ${CMAKE_SOURCE_DIR}/include/Server/include/ClientSession/include
         ${CMAKE_SOURCE_DIR}/include/Parser/include
         ${CMAKE_SOURCE_DIR}/include/Logger/include
         ${CMAKE_SOURCE_DIR}/include/Utils/include
+        ${CMAKE_SOURCE_DIR}/include/SocketWrapper/include
+)
+
+target_link_libraries(Server PRIVATE
+    Parser
 )

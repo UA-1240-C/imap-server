@@ -32,7 +32,7 @@ public:
     boost::asio::io_context& m_io_context;
 
 public:
-    inline void ISocketWrapper::StartTimeoutTimer(std::chrono::seconds timeout_duration)
+    inline void StartTimeoutTimer(std::chrono::seconds timeout_duration)
     {
         if (!m_timeout_timer)
         {
@@ -54,7 +54,7 @@ public:
             });
     }
 
-    inline void ISocketWrapper::CancelTimeoutTimer()
+    inline void CancelTimeoutTimer()
     {
         if (!m_timeout_timer)
         {
@@ -74,7 +74,7 @@ public:
         }
     }
 
-    inline void ISocketWrapper::RestartTimeoutTimer(std::chrono::seconds timeout_duration)
+    inline void RestartTimeoutTimer(std::chrono::seconds timeout_duration)
     {
         CancelTimeoutTimer();
         StartTimeoutTimer(timeout_duration);

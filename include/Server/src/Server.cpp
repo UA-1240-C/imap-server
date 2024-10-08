@@ -108,8 +108,8 @@ void Server::InitializeThreadPool()
 
 void Server::InitializeTimeout()
 {
-    int blocking{};
-    int socket_timeout{};
+//     int blocking{};
+//     int socket_timeout{};
     const auto& [blocking, socket_timeout] = m_config.get_communication_settings();
 
     m_timeout_duration = std::chrono::seconds(socket_timeout);

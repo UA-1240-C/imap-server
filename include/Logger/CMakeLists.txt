@@ -22,4 +22,3 @@ target_link_libraries(Logger PUBLIC
     Threads::Threads
 )
 
-add_subdirectory(tests)

@@ -24,13 +24,13 @@ class ClientSession
 public:
     ClientSession(TcpSocketPtr socket, boost::asio::ssl::context& ssl_context, std::chrono::seconds timeout_duraion,
                   boost::asio::io_context& io_context);
-    ~ClientSession();
+    ~ClientSession() = default;
 
     void PollForRequest();
 
 private:
     void HandleNewRequest();
-    void ProcessRequest();
+    // void ProcessRequest();
 
     void StartTLS();
 
