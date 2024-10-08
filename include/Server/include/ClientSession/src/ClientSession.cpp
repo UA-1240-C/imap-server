@@ -1,20 +1,24 @@
 #include "ClientSession.h"
 
-#include "SslSocketWrapper.h"
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
+#include "SslSocketWrapper.h"
 using ISXSockets::SslSocketWrapper;
 
 namespace ISXCS
 {
-ClientSession::ClientSession(TcpSocketPtr socket, boost::asio::ssl::context& ssl_context,
+ClientSession::ClientSession(std::shared_ptr<ISocketWrapper> socket, boost::asio::ssl::context& ssl_context,
                              std::chrono::seconds timeout_duration, boost::asio::io_context& io_context)
-    : m_socket(std::dynamic_pointer_cast<ISocketWrapper>(socket)),
-      m_io_context(io_context),
+    : m_io_context(io_context),
       m_ssl_context(ssl_context),
       m_timeout_duration(timeout_duration),
       m_current_state(IMAPState::CONNECTED)
 {
+    m_socket = socket;
     m_socket->StartTimeoutTimer(timeout_duration);
+    m_socket->WhoIs();
+    m_socket->SendResponseAsync("Hello");
 }
 
 void ClientSession::PollForRequest()
@@ -58,29 +62,28 @@ void ClientSession::HandleNewRequest()
     current_line.append(buffer);
 
     std::size_t pos;
-    while((pos = current_line.find(ISocketWrapper::CRLF)) != std::string::npos)
+    while ((pos = current_line.find(ISocketWrapper::CRLF)) != std::string::npos)
     {
         std::string line = current_line.substr(0, pos);
         current_line.erase(0, pos + std::string(ISocketWrapper::CRLF).length());
 
-        try 
+        try
         {
-            //ProcessRequest()
+            // ProcessRequest()
         }
-        catch(const std::exception& e)
+        catch (const std::exception& e)
         {
-
         }
     }
 }
 
 void ClientSession::StartTLS()
 {
-    auto tcp_socket = m_socket->get_socket<TcpSocket>();
+    /*    auto tcp_socket = m_socket->get_socket<TcpSocket>();
 
     m_socket = std::make_shared<SslSocketWrapper>(m_io_context, m_ssl_context, tcp_socket);
 
-    std::static_pointer_cast<SslSocket>(m_socket)->async_handshake(
+    std::dynamic_pointer_cast<SslSocket>(m_socket)->async_handshake(
         boost::asio::ssl::stream_base::server,
         [this](const boost::system::error_code& error)
         {
@@ -90,5 +93,6 @@ void ClientSession::StartTLS()
                 return;
             }
         });
+    */
 }
 }  // namespace ISXCS
