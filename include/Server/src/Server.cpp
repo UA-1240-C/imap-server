@@ -1,9 +1,12 @@
 #include "Server.h"
 
 #include "ClientSession.h"
+#include "ISocketWrapper.h"
+#include "TcpSocketWrapper.h"
 
 using namespace boost::asio::ip;
 using ISXCS::ClientSession;
+
 using ISXSockets::ISocketWrapper;
 using ISXSockets::TcpSocketWrapper;
 
@@ -25,17 +28,18 @@ void Server::Start() { Accept(); }
 
 void Server::Accept()
 {
-    auto socket_wrapper = std::make_shared<TcpSocketWrapper>(m_io_context);
+    std::shared_ptr<ISocketWrapper> socket_wrapper = std::make_shared<TcpSocketWrapper>(m_io_context);
 
-    auto tcp_socket = socket_wrapper->get_socket<TcpSocket>();
+    auto tcp_socket = std::static_pointer_cast<TcpSocket>(socket_wrapper->get_socket());
     if (!tcp_socket)
     {
         Logger::LogError("Failed to retrieve a valid TCP socket");
         return;
     }
-
+    std::cout << m_port << std::endl;
+    socket_wrapper->WhoIs();
     m_acceptor->async_accept(*tcp_socket,
-                             [this, tcp_socket, socket_wrapper](const boost::system::error_code& error)
+                             [this, socket_wrapper](const boost::system::error_code& error)
                              {
                                  if (error)
                                  {
@@ -46,7 +50,7 @@ void Server::Accept()
                                  try
                                  {
                                      std::unique_ptr<ClientSession> client_session = std::make_unique<ClientSession>(
-                                         tcp_socket, m_ssl_context, m_timeout_duration, m_io_context);
+                                         socket_wrapper, m_ssl_context, m_timeout_duration, m_io_context);
 
                                      client_session->PollForRequest();
                                  }
@@ -60,7 +64,8 @@ void Server::Accept()
 void Server::InitializeAcceptor()
 {
     std::tie(m_server_name, m_server_display_name, m_port, m_server_ip) = m_config.get_server_tuple();
-
+    
+    std::cout << "port: " << m_port << std::endl;
     try
     {
         tcp::resolver resolver(m_io_context);
@@ -108,8 +113,8 @@ void Server::InitializeThreadPool()
 
 void Server::InitializeTimeout()
 {
-    int blocking{};
-    int socket_timeout{};
+    //     int blocking{};
+    //     int socket_timeout{};
     const auto& [blocking, socket_timeout] = m_config.get_communication_settings();
 
     m_timeout_duration = std::chrono::seconds(socket_timeout);
