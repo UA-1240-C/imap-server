@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <chrono>
 
 #include "MailException.h"
 
@@ -353,6 +354,7 @@ public:
     
     virtual std::vector<Mail> RetrieveMessagesFromFolder(const std::string_view folder_name, const ReceivedState& is_received) = 0;
     virtual std::vector<Mail> RetrieveMessagesFromFolderWithFlags(const std::string_view folder_name, FlagsSearchBy& flags, const ReceivedState& is_received) = 0;
+    virtual std::vector<uint32_t> RetrieveMessagesWithSenderAndDate(const std::string_view from, std::chrono::system_clock::time_point& date) = 0;
     
     /**
      * @brief Returns name of current logged in user. If nobody is logged in, returns empty string.
