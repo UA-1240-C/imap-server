@@ -19,6 +19,11 @@ Config::Logging Config::get_logging() const { return logging; }
 Config::Time Config::get_time() const { return time; }
 Config::ThreadPool Config::get_thread_pool() const { return thread_pool; }
 
+std::tuple<std::string, std::string, int, std::string> Config::get_server_tuple() const
+{
+    return std::make_tuple(server.server_name, server.server_display_name, server.listener_port, server.ip_address);
+}
+
 void Config::ParseServerConfig(const JSON &root) {
     if (root.get_object_value().count("Server")) {
         const auto &server_obj = root.get_object_value().at("Server").get_object_value();

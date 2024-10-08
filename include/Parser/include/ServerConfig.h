@@ -42,6 +42,8 @@ public:
     Time get_time() const;
     ThreadPool get_thread_pool() const;
 
+    std::tuple<std::string, std::string, int, std::string> get_server_tuple() const;
+
 private:
     Server server;
     CommunicationSettings communication_settings;
