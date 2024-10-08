@@ -4,7 +4,13 @@ add_library(SocketWrapper
 )
 
 target_include_directories(SocketWrapper PUBLIC
-    ${CMAKE_SOURCE_DIR}/include/SocketWrapper/include
-    ${CMAKE_SOURCE_DIR}/include/Logger/include
-    ${CMAKE_SOURCE_DIR}/include/Parser/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(SocketWrapper PRIVATE
+    Logger
+    Boost::log 
+    Boost::log_setup
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )

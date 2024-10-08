@@ -20,11 +20,9 @@ public:
     void Close() override;
     bool IsOpen() const override;
 
-    template <typename SocketType>
-    std::shared_ptr<SocketType> get_socket()
-    {
-        return m_socket;
-    }
+    virtual void WhoIs() { std::cout << "SslWrapper" << std::endl; }
+
+    inline std::shared_ptr<void> get_socket() const override { return m_socket; }
 
 private:
     TcpSocketPtr m_socket;

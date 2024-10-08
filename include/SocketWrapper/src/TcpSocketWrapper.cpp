@@ -7,6 +7,8 @@ TcpSocketWrapper::TcpSocketWrapper(boost::asio::io_context& io_context)
 {
 }
 
+TcpSocketWrapper::~TcpSocketWrapper() {}
+
 std::future<void> TcpSocketWrapper::SendResponseAsync(const std::string& message)
 {
     auto promise = std::make_shared<std::promise<void>>();

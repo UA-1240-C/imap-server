@@ -3,6 +3,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <memory>
 
 #include "Logger.h"
 
@@ -23,8 +24,9 @@ public:
     virtual void Close() = 0;
     virtual bool IsOpen() const = 0;
 
-    template <typename SocketType>
-    std::shared_ptr<SocketType> get_socket();
+    virtual std::shared_ptr<void> get_socket() const = 0;
+
+    virtual void WhoIs() { std::cout << "ISocketWrapper" << std::endl; }
 
     static constexpr const char* CRLF = "\r\n";
 
@@ -32,7 +34,7 @@ public:
     boost::asio::io_context& m_io_context;
 
 public:
-    inline void ISocketWrapper::StartTimeoutTimer(std::chrono::seconds timeout_duration)
+    inline void StartTimeoutTimer(std::chrono::seconds timeout_duration)
     {
         if (!m_timeout_timer)
         {
@@ -54,7 +56,7 @@ public:
             });
     }
 
-    inline void ISocketWrapper::CancelTimeoutTimer()
+    inline void CancelTimeoutTimer()
     {
         if (!m_timeout_timer)
         {
@@ -74,12 +76,12 @@ public:
         }
     }
 
-    inline void ISocketWrapper::RestartTimeoutTimer(std::chrono::seconds timeout_duration)
+    inline void RestartTimeoutTimer(std::chrono::seconds timeout_duration)
     {
         CancelTimeoutTimer();
         StartTimeoutTimer(timeout_duration);
     }
 };
-}  // namespace ISXISocketWrapper
+}  // namespace ISXSockets
 
 #endif  // I_SOCKET_WRAPPER_H

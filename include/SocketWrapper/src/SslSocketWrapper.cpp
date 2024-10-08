@@ -65,8 +65,8 @@ std::future<std::string> SslSocketWrapper::ReadFromSocketAsync()
 
             std::istream is(buffer.get());
             std::string message;
-            std::getline(is, message);    // читаємо повідомлення до роздільника
-            promise->set_value(message);  // повертаємо результат
+            std::getline(is, message);
+            promise->set_value(message);
         });
 
     return future;
