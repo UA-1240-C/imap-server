@@ -11,6 +11,10 @@
 #include "TcpSocketWrapper.h"
 #include "ThreadPool.h"
 
+#include "MailDB/PgMailDB.h"
+#include "MailDB/ConnectionPool.h"
+#include "MailDB/PgManager.h"
+
 using boost::asio::ip::tcp;
 
 namespace ISXSS
@@ -40,6 +44,15 @@ private:
 
     std::unique_ptr<tcp::acceptor> m_acceptor;
 
+    std::unique_ptr<ISXMailDB::PgManager> m_pg_manager;
+    std::unique_ptr<ISXMailDB::ConnectionPool<pqxx::connection>> m_connection_pool;
+    const uint16_t MAX_DATABASE_CONNECTIONS = 10;
+
+    static constexpr const char* S_CONNECTION_STRING =
+        "postgresql://postgres.qotrdwfvknwbfrompcji:"
+        "yUf73LWenSqd9Lt4@aws-0-eu-central-1.pooler."
+        "supabase.com:6543/postgres?sslmode=require";
+
 private:
     void Accept();
     void InitializeAcceptor();
@@ -48,6 +61,8 @@ private:
     void InitializeTimeout();
 
     void ConfigureSslContext();
+
+    void InitializeDatabaseManager();
 
     boost::asio::steady_timer m_timeout_timer;
 

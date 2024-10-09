@@ -7,21 +7,12 @@ namespace ISXImapRequest
 {
 enum class IMAPCommand
 {
+    STARTTLS,
     CAPABILITY,
     LOGIN,
-    LOGOUT,
     BYE,
     SELECT,
-    EXAMINE,
     FETCH,
-    STORE,
-    COPY,
-    CREATE,
-    DELETE,
-    RENAME,
-    SEARCH,
-    IDLE,
-    APPEND
 };
 
 struct ImapRequest
@@ -40,7 +31,7 @@ private:
     ~ImapParser() = delete;
 
 public:
-    static ImapParser Parse(const std::string& request);
+    static ImapRequest Parse(const std::string& request);
 };
 }  // namespace ISXImapRequest
 

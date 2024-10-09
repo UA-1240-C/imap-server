@@ -1,10 +1,10 @@
 #include "ImapRequest.h"
 namespace ISXImapRequest
 {
-ImapParser ImapParser::Parse(const std::string& request) 
+ImapRequest ImapParser::Parse(const std::string& request) 
 {
     ImapRequest imap_request;
-zquest.data = request;
+    imap_request.data = request;
 
     if (request.find("CAPABILITY") == 0)
     {
@@ -14,5 +14,7 @@ zquest.data = request;
     {
         imap_request.command = IMAPCommand::LOGIN;
     }
+
+    return imap_request;
 }
 }  // namespace ISXImapRequest

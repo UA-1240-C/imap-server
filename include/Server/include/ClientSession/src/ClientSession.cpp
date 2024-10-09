@@ -3,17 +3,22 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 
+#include "MailDB/PgMailDB.h"
+
 #include "SslSocketWrapper.h"
 using ISXSockets::SslSocketWrapper;
 
 namespace ISXCS
 {
 ClientSession::ClientSession(std::shared_ptr<ISocketWrapper> socket, boost::asio::ssl::context& ssl_context,
-                             std::chrono::seconds timeout_duration, boost::asio::io_context& io_context)
-    : m_io_context(io_context),
-      m_ssl_context(ssl_context),
-      m_timeout_duration(timeout_duration),
-      m_current_state(IMAPState::CONNECTED)
+                             std::chrono::seconds timeout_duration, boost::asio::io_context& io_context,
+                             ISXMailDB::PgManager& pg_manager)
+        : m_io_context(io_context)
+        , m_ssl_context(ssl_context)
+        , m_timeout_duration(timeout_duration)
+        , m_current_state(IMAPState::CONNECTED)
+        , m_database(std::make_unique<ISXMailDB::PgMailDB>(pg_manager))
+
 {
     m_socket_wrapper = socket;
     m_socket_wrapper->StartTimeoutTimer(timeout_duration);
@@ -136,6 +141,26 @@ std::future<void> ClientSession::AsyncPerformHandshake()
 
     Logger::LogDebug("Exiting ClientSession::PerformTlsHandshake");
     return future;
+}
+
+void ClientSession::HandleCapability()
+{
+    Logger::LogDebug("Entering ClientSession::HandleCapability");
+    std::future<void> wrft =  m_socket_wrapper->SendResponseAsync(
+        "* CAPABILITY IMAP4rev1 STARTTLS\r\n");
+
+    try
+    {
+        wrft.get();
+    }
+    catch (const std::exception& e)
+    {
+        Logger::LogError("Error sending response: " + std::string(e.what()));
+        Logger::LogDebug("Exiting ClientSession::HandleCapability");
+        throw;
+    }
+
+    Logger::LogDebug("Exiting ClientSession::HandleCapability");
 }
 
 }  // namespace ISXCS
