@@ -11,6 +11,7 @@ TcpSocketWrapper::~TcpSocketWrapper() {}
 
 std::future<void> TcpSocketWrapper::SendResponseAsync(const std::string& message)
 {
+    Logger::LogProd("SendResponseAsync enter");
     auto promise = std::make_shared<std::promise<void>>();
     auto future = promise->get_future();
 
@@ -23,7 +24,7 @@ std::future<void> TcpSocketWrapper::SendResponseAsync(const std::string& message
     }
 
     async_write(*m_socket, boost::asio::buffer(message),
-                [promise](const boost::system::error_code& error, std::size_t)
+                [promise, message](const boost::system::error_code& error, std::size_t)
                 {
                     if (error)
                     {
@@ -31,9 +32,12 @@ std::future<void> TcpSocketWrapper::SendResponseAsync(const std::string& message
                         promise->set_exception(std::make_exception_ptr(std::runtime_error(error.message())));
                         return;
                     }
+
+                    Logger::LogProd("Data: " + message);
                     promise->set_value();
                 });
 
+    Logger::LogProd("SendResponseAsync exit");
     return future;
 }
 
@@ -41,7 +45,7 @@ std::future<std::string> TcpSocketWrapper::ReadFromSocketAsync()
 {
     auto promise = std::make_shared<std::promise<std::string>>();
     auto future = promise->get_future();
-    auto buffer = std::make_shared<boost::asio::streambuf>();  // створення буфера
+    auto buffer = std::make_shared<boost::asio::streambuf>();
 
     if (!m_socket)
     {
@@ -103,4 +107,4 @@ void TcpSocketWrapper::Close()
 
 bool TcpSocketWrapper::IsOpen() const { return m_socket->is_open() ? true : false; }
 
-}  // namespace ISXTcpSocketWrapper
+}  // namespace ISXSockets

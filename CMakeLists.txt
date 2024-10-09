@@ -14,7 +14,7 @@ if (NOT Boost_FOUND)
     FetchContent_Declare(
             boost
             GIT_REPOSITORY https://github.com/boostorg/boost.git
-            GIT_TAG boost-1.86.0
+            GIT_TAG boost-1.83.0
     )
     FetchContent_MakeAvailable(boost)
 endif()

@@ -15,10 +15,10 @@ ClientSession::ClientSession(std::shared_ptr<ISocketWrapper> socket, boost::asio
       m_timeout_duration(timeout_duration),
       m_current_state(IMAPState::CONNECTED)
 {
-    m_socket = socket;
-    m_socket->StartTimeoutTimer(timeout_duration);
-    m_socket->WhoIs();
-    m_socket->SendResponseAsync("Hello");
+    m_socket_wrapper = socket;
+    m_socket_wrapper->StartTimeoutTimer(timeout_duration);
+    m_socket_wrapper->WhoIs();
+    m_socket_wrapper->WhoIs();
 }
 
 void ClientSession::PollForRequest()
@@ -48,15 +48,26 @@ void ClientSession::PollForRequest()
 
 void ClientSession::HandleNewRequest()
 {
-    if (!m_socket->IsOpen())
+    if (!m_socket_wrapper->IsOpen())
     {
         Logger::LogWarning("Client disconneced.");
         throw std::runtime_error("Client disconnected.");
     }
 
-    auto buffer = m_socket->ReadFromSocketAsync().get();
-    m_socket->RestartTimeoutTimer(m_timeout_duration);
+    std::string buffer = m_socket_wrapper->ReadFromSocketAsync().get();
+    m_socket_wrapper->WhoIs();
     Logger::LogProd("Received data: " + buffer);
+
+    if (buffer.find("STARTTLS") != std::string::npos)
+    {
+        std::cout << "IN IF" << std::endl;
+        m_socket_wrapper->SendResponseAsync("* OK SOSI\r\n").get();
+        AsyncPerformHandshake().get();
+    }
+
+    std::cout << "after IF" << std::endl;
+
+    m_socket_wrapper->RestartTimeoutTimer(m_timeout_duration);
 
     std::string current_line{};
     current_line.append(buffer);
@@ -77,22 +88,54 @@ void ClientSession::HandleNewRequest()
     }
 }
 
-void ClientSession::StartTLS()
+std::future<void> ClientSession::AsyncPerformHandshake()
 {
-    /*    auto tcp_socket = m_socket->get_socket<TcpSocket>();
+    Logger::LogDebug("Entering ClientSession::PerformTlsHandshake");
+    auto promise = std::make_shared<std::promise<void>>();
+    auto future = promise->get_future();
 
-    m_socket = std::make_shared<SslSocketWrapper>(m_io_context, m_ssl_context, tcp_socket);
+    TcpSocketPtr tcp_socket = std::static_pointer_cast<TcpSocket>(m_socket_wrapper->get_socket());
+    if (!tcp_socket)
+    {
+        promise->set_exception(std::make_exception_ptr(std::runtime_error("Failed to retrieve TCP socket")));
+        return future;
+    }
 
-    std::dynamic_pointer_cast<SslSocket>(m_socket)->async_handshake(
+    auto ssl_socket_wrapper = std::make_shared<SslSocketWrapper>(m_io_context, m_ssl_context, tcp_socket);
+
+    auto ssl_socket = std::static_pointer_cast<SslSocket>(ssl_socket_wrapper->get_socket());
+
+    std::cout << "Is SSL socket open: " << std::boolalpha << ssl_socket->lowest_layer().is_open() << std::endl;
+
+    try
+    {
+        auto remote_port = ssl_socket->lowest_layer().remote_endpoint().port();
+        std::cout << "Remote endpoint port: " << remote_port << std::endl;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error retrieving remote endpoint: " << e.what() << std::endl;
+    }
+
+    ssl_socket->async_handshake(
         boost::asio::ssl::stream_base::server,
-        [this](const boost::system::error_code& error)
+        [promise, this, ssl_socket_wrapper](const boost::system::error_code& error)
         {
             if (error)
             {
                 Logger::LogError("Error during handshake: " + error.message());
+                promise->set_exception(std::make_exception_ptr(std::runtime_error(error.message())));
                 return;
             }
+
+            m_socket_wrapper = ssl_socket_wrapper;
+            m_socket_wrapper->WhoIs();
+            m_socket_wrapper->SendResponseAsync("* OK 228\r\n");
+            promise->set_value();
         });
-    */
+
+    Logger::LogDebug("Exiting ClientSession::PerformTlsHandshake");
+    return future;
 }
+
 }  // namespace ISXCS

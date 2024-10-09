@@ -32,13 +32,13 @@ private:
     void HandleNewRequest();
     // void ProcessRequest();
 
-    void StartTLS();
+    std::future<void> AsyncPerformHandshake();
 
 private:
     IMAPState m_current_state;
 
 private:
-    std::shared_ptr<ISocketWrapper> m_socket;
+    std::shared_ptr<ISocketWrapper> m_socket_wrapper;
     boost::asio::io_context& m_io_context;
     boost::asio::ssl::context& m_ssl_context;
 

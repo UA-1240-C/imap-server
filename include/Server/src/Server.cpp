@@ -28,16 +28,19 @@ void Server::Start() { Accept(); }
 
 void Server::Accept()
 {
-    std::shared_ptr<ISocketWrapper> socket_wrapper = std::make_shared<TcpSocketWrapper>(m_io_context);
+    Logger::LogDebug("Entering Server::Accept");
 
+    auto socket_wrapper = std::make_shared<TcpSocketWrapper>(m_io_context);
     auto tcp_socket = std::static_pointer_cast<TcpSocket>(socket_wrapper->get_socket());
+
     if (!tcp_socket)
     {
         Logger::LogError("Failed to retrieve a valid TCP socket");
         return;
     }
-    std::cout << m_port << std::endl;
-    socket_wrapper->WhoIs();
+
+    Logger::LogProd("Ready to accept new connections.");
+
     m_acceptor->async_accept(*tcp_socket,
                              [this, socket_wrapper](const boost::system::error_code& error)
                              {
@@ -47,24 +50,34 @@ void Server::Accept()
                                      return;
                                  }
 
-                                 try
-                                 {
-                                     std::unique_ptr<ClientSession> client_session = std::make_unique<ClientSession>(
-                                         socket_wrapper, m_ssl_context, m_timeout_duration, m_io_context);
+                                 Logger::LogProd("Accepted new connection.");
+                                 m_thread_pool->EnqueueDetach(
+                                     [this, socket_wrapper]
+                                     {
+                                         try
+                                         {
+                                             std::unique_ptr<ClientSession> client_session =
+                                                 std::make_unique<ClientSession>(socket_wrapper, m_ssl_context,
+                                                                                 m_timeout_duration, m_io_context);
 
-                                     client_session->PollForRequest();
-                                 }
-                                 catch (const std::exception& e)
-                                 {
-                                     Logger::LogError("Error in Server::Accept: " + std::string(e.what()));
-                                 }
+                                             client_session->PollForRequest();
+                                         }
+                                         catch (const std::exception& e)
+                                         {
+                                             Logger::LogError("Error in Server::Accept: " + std::string(e.what()));
+                                         }
+                                     });
+
+                                 Accept();
                              });
+
+    Logger::LogDebug("Exiting Accept");
 }
 
 void Server::InitializeAcceptor()
 {
     std::tie(m_server_name, m_server_display_name, m_port, m_server_ip) = m_config.get_server_tuple();
-    
+
     std::cout << "port: " << m_port << std::endl;
     try
     {
@@ -113,8 +126,6 @@ void Server::InitializeThreadPool()
 
 void Server::InitializeTimeout()
 {
-    //     int blocking{};
-    //     int socket_timeout{};
     const auto& [blocking, socket_timeout] = m_config.get_communication_settings();
 
     m_timeout_duration = std::chrono::seconds(socket_timeout);

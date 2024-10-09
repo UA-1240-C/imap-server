@@ -4,9 +4,29 @@ namespace ISXSockets
 {
 SslSocketWrapper::SslSocketWrapper(boost::asio::io_context& io_context, boost::asio::ssl::context& ssl_context,
                                    std::shared_ptr<TcpSocket> tcp_socket)
-    : m_socket(std::make_shared<SslSocket>(std::move(*tcp_socket), ssl_context)), ISocketWrapper(io_context)
+    : ISocketWrapper(io_context)
 {
-    m_socket->lowest_layer() = std::move(*tcp_socket);
+    try
+    {
+        auto remote_port = tcp_socket->lowest_layer().remote_endpoint().port();
+        std::cout << "Remote endpoint port: " << remote_port << std::endl;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error retrieving remote endpoint: " << e.what() << std::endl;
+    }
+
+    m_socket = std::make_shared<SslSocket>(std::move(*tcp_socket), ssl_context);
+
+    try
+    {
+        auto remote_port = m_socket->lowest_layer().remote_endpoint().port();
+        std::cout << "Remote endpoint port: " << remote_port << std::endl;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error retrieving remote endpoint: " << e.what() << std::endl;
+    }
 }
 
 SslSocketWrapper::~SslSocketWrapper() { Close(); }

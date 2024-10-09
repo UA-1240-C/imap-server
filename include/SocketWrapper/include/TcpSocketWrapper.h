@@ -20,7 +20,7 @@ public:
     void Close() override;
     bool IsOpen() const override;
 
-    virtual void WhoIs() { std::cout << "SslWrapper" << std::endl; }
+    virtual void WhoIs() { std::cout << "TcpWrapper" << std::endl; }
 
     inline std::shared_ptr<void> get_socket() const override { return m_socket; }
 
