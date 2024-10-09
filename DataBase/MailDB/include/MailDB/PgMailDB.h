@@ -93,6 +93,8 @@ public:
     void DeleteUser(const std::string_view user_name, const std::string_view password) override;
 
     void AddFolder(const std::string_view folder_name) override;
+    void RenameFolder(const std::string_view current_folder_name, const std::string_view new_folder_name) override;
+    bool FolderExists(const std::string_view folder_name) override;
     void AddMessageToFolder(const std::string_view folder_name, const Mail& message) override;
     void MoveMessageToFolder(const std::string_view from, const std::string_view to, const Mail& message) override;
     void FlagMessage(const std::string_view flag_name, const Mail& message) override;
@@ -103,6 +105,8 @@ public:
 
     std::vector<Mail> RetrieveMessagesFromFolder(const std::string_view folder_name, const ReceivedState& is_received) override;
     std::vector<Mail> RetrieveMessagesFromFolderWithFlags(const std::string_view folder_name, FlagsSearchBy& flags, const ReceivedState& is_received) override;
+    std::vector<uint32_t> RetrieveMessagesWithSenderAndDate(const std::string_view from, std::chrono::system_clock::time_point& date) override;
+
     
 protected:
     /**
@@ -202,6 +206,7 @@ protected:
     uint32_t RetrieveFlagID(const std::string_view flag_name, pqxx::transaction_base& transaction) const;
 
     std::string get_received_state_string(const ReceivedState& is_received);
+    std::string ConvertTimepointToString(std::chrono::system_clock::time_point& date);
 
     const std::string HOST_NAME; ///< The host name associated with the database.
     const uint32_t HOST_ID; ///< The host ID associated with the database.

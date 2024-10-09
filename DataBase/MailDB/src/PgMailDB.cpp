@@ -584,6 +584,55 @@ void PgMailDB::AddFolder(const std::string_view folder_name)
     }    
 }
 
+void PgMailDB::RenameFolder(const std::string_view current_folder_name, const std::string_view new_folder_name)
+{
+    PgConnection conn(*m_connection_pool);
+    pqxx::work transaction(*conn);
+
+    try
+    {
+        if(FolderExists(current_folder_name) && !FolderExists(new_folder_name))
+        {
+            transaction.exec_params(
+                "UPDATE \"folders\" "
+                "SET folder_name = $1 "
+                "WHERE folder_name = $2 AND user_id = $3",
+                new_folder_name,
+                current_folder_name,
+                m_user_id
+            );
+
+            transaction.commit();
+        }
+        else
+        {
+            throw MailException("Mentioned folder doesn't exists OR new folder name already used");
+        }
+    }
+    catch(const std::exception& e)
+    {
+        throw MailException(e.what());
+    }
+}
+
+bool PgMailDB::FolderExists(const std::string_view folder_name)
+{
+    PgConnection conn(*m_connection_pool);
+    pqxx::work transaction(*conn);
+
+    try
+    {
+        pqxx::result result = transaction.exec_params("SELECT * FROM \"folders\" WHERE folder_name = $1 AND user_id = $2"
+                                                     , folder_name, m_user_id);
+
+        return !result.empty();
+    }
+    catch(const std::exception& e)
+    {
+        throw MailException(e.what());
+    }
+}
+
 void PgMailDB::AddMessageToFolder(const std::string_view folder_name, const Mail& message)
 {
     PgConnection conn(*m_connection_pool);
@@ -846,6 +895,51 @@ std::vector<Mail> PgMailDB::RetrieveMessagesFromFolderWithFlags(const std::strin
     {
         throw MailException(e.what());
     }
+}
+
+std::vector<uint32_t> PgMailDB::RetrieveMessagesWithSenderAndDate(const std::string_view from, std::chrono::system_clock::time_point& date)
+{
+    std::string formatted_date = ConvertTimepointToString(date);
+
+    PgConnection conn(*m_connection_pool);
+    pqxx::transaction transaction(*conn);
+
+    std::vector<uint32_t> email_ids;
+
+    try
+    {
+        uint32_t sender_id = RetriveUserId(from, transaction);
+
+        pqxx::result email_ids_result = transaction.exec_params("SELECT email_message_id FROM \"emailMessages\""
+                                                         "WHERE sender_id = $1 AND recipient_id = $2 AND sent_at::date = $3"
+                                                         , sender_id, m_user_id, transaction.quote(formatted_date));
+
+        if(!email_ids_result.empty())
+        {
+            for(auto&& row: email_ids_result)
+            {
+                email_ids.emplace_back(row.at("email_message_id").as<uint32_t>());
+            }
+        }
+
+        return email_ids;
+    }
+    catch(const std::exception& e)
+    {
+        throw MailException(e.what());
+    }
+    
+}
+
+std::string PgMailDB::ConvertTimepointToString(std::chrono::system_clock::time_point& date)
+{
+    std::time_t date_time_t = std::chrono::system_clock::to_time_t(date);
+    std::tm date_tm = *std::localtime(&date_time_t);
+
+    std::stringstream ss;
+    ss << std::put_time(&date_tm, "%Y-%m-%d");
+
+    return ss.str();
 }
 
 std::string PgMailDB::get_received_state_string(const ReceivedState& is_received)

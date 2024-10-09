@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <chrono>
+
 
 #include "MailException.h"
 
@@ -340,6 +342,8 @@ public:
 
     
     virtual void AddFolder(const std::string_view folder_name) = 0;
+    virtual void RenameFolder(const std::string_view current_folder_name, const std::string_view new_folder_name) = 0;
+    virtual bool FolderExists(const std::string_view folder_name) = 0;
     virtual void AddMessageToFolder(const std::string_view folder_name, const Mail& message) = 0;
     virtual void MoveMessageToFolder(const std::string_view from, const std::string_view to, const Mail& message) = 0;
     virtual void FlagMessage(const std::string_view flag_name, const Mail& message) = 0;
@@ -351,6 +355,7 @@ public:
     
     virtual std::vector<Mail> RetrieveMessagesFromFolder(const std::string_view folder_name, const ReceivedState& is_received) = 0;
     virtual std::vector<Mail> RetrieveMessagesFromFolderWithFlags(const std::string_view folder_name, FlagsSearchBy& flags, const ReceivedState& is_received) = 0;
+    virtual std::vector<uint32_t> RetrieveMessagesWithSenderAndDate(const std::string_view from, std::chrono::system_clock::time_point& date) = 0;
     
     /**
      * @brief Returns name of current logged in user. If nobody is logged in, returns empty string.
