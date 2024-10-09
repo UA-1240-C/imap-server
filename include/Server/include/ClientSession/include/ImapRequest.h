@@ -32,6 +32,8 @@ private:
 
 public:
     static ImapRequest Parse(const std::string& request);
+    static std::string ExtractCommand(const std::string& request);
+    static std::pair<std::string, std::string> ExtractUserAndPass(const std::string& request);
 };
 }  // namespace ISXImapRequest
 

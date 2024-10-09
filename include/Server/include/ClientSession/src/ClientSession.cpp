@@ -4,8 +4,9 @@
 #include <boost/asio/ssl.hpp>
 
 #include "MailDB/PgMailDB.h"
-
+#include "ImapRequest.h"
 #include "SslSocketWrapper.h"
+
 using ISXSockets::SslSocketWrapper;
 
 namespace ISXCS
@@ -143,7 +144,7 @@ std::future<void> ClientSession::AsyncPerformHandshake()
     return future;
 }
 
-void ClientSession::HandleCapability()
+void ClientSession::HandleCapability(ISXImapRequest::ImapRequest& request)
 {
     Logger::LogDebug("Entering ClientSession::HandleCapability");
     std::future<void> wrft =  m_socket_wrapper->SendResponseAsync(
@@ -161,6 +162,45 @@ void ClientSession::HandleCapability()
     }
 
     Logger::LogDebug("Exiting ClientSession::HandleCapability");
+}
+
+void ClientSession::HandleLogin(ISXImapRequest::ImapRequest& request)
+{
+    Logger::LogDebug("Entering ClientSession::HandleLogin");
+
+    try
+    {
+        auto [username, password] = ISXImapRequest::ImapParser::ExtractUserAndPass(request.data);
+        try
+        {
+            m_database->Login(username, password);
+        }
+        catch (const ISXMailDB::MailException& e)
+        {
+            m_socket_wrapper->SendResponseAsync(std::string("- NO ") + e.what() + "\r\n").get();
+            return;
+        }
+
+        std::future<void> wrft = m_socket_wrapper->SendResponseAsync("+ OK Logged in\r\n");
+
+        try
+        {
+            wrft.get();
+        }
+        catch (const std::exception& e)
+        {
+            Logger::LogError("Error sending response: " + std::string(e.what()));
+            throw;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        Logger::LogError("Error extracting username and password: " + std::string(e.what()));
+        Logger::LogDebug("Exiting ClientSession::HandleLogin");
+        throw;
+    }
+
+    Logger::LogDebug("Exiting ClientSession::HandleLogin");
 }
 
 }  // namespace ISXCS
