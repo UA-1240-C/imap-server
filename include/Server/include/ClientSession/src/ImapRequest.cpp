@@ -1,34 +1,25 @@
 #include "ImapRequest.h"
+
 #include <iostream>
+#include <map>
 #include <regex>
+
+#include "Logger.h"
 
 namespace ISXImapRequest
 {
-ImapRequest ImapParser::Parse(const std::string& request) 
+ImapRequest ImapParser::Parse(const std::string& request)
 {
     ImapRequest imap_request;
     imap_request.data = request;
 
-    std::cout << "Before ExtractCommand" << std::endl;
-    std::string command = ExtractCommand(request);
-    std::cout << "After ExtractCommand" << std::endl;
+    static const std::map<std::string, IMAPCommand> command_map = {
+        {"STARTTLS", IMAPCommand::STARTTLS}, {"CAPABILITY", IMAPCommand::CAPABILITY}, {"LOGIN", IMAPCommand::LOGIN},
+        {"LOGOUT", IMAPCommand::LOGOUT},     {"SELECT", IMAPCommand::SELECT},         {"FETCH", IMAPCommand::FETCH}};
 
-    if (command == "STARTTLS")
-    {
-        imap_request.command = IMAPCommand::STARTTLS;
-    }
-    else if (command == "LOGIN")
-    {
-        imap_request.command = IMAPCommand::LOGIN;
-    }
-    else if (command == "CAPABILITY")
-    {
-        imap_request.command = IMAPCommand::CAPABILITY;
-    }
-    else
-    {
-        throw std::runtime_error("Invalid command");
-    }
+    std::string command = ExtractCommand(request);
+    auto it = command_map.find(command);
+    imap_request.command = (it != command_map.end()) ? it->second : IMAPCommand::UNKNOWN;
 
     return imap_request;
 }

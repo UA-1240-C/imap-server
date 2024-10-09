@@ -8,13 +8,13 @@
 #include "MailDB/MailException.h"
 #include "ImapRequest.h"
 
+using ISXImapRequest::ImapRequest;
 using ISXMailDB::MailException;
 using ISXSockets::ISocketWrapper;
 
 enum class IMAPState
 {
     CONNECTED,
-    ENCRYPTED,
     AUTHENTICATED,
     SELECTED,
     FETCHING,
@@ -43,9 +43,15 @@ private:
     void HandleStartTLS(ISXImapRequest::ImapRequest& request);
     void HandleCapability(ISXImapRequest::ImapRequest& request, std::string& commands);
     void HandleLogin(ISXImapRequest::ImapRequest& request);
+    void ProcessRequest(const ImapRequest& request);
+
+    std::future<void> AsyncPerformHandshake();
+
+    void HandleBye(const ImapRequest& request);
+    void HandleFetch(const ImapRequest& request);
 
 private:
-    IMAPState m_current_state;
+    ClientState m_current_state;
 
 private:
     std::shared_ptr<ISocketWrapper> m_socket_wrapper;

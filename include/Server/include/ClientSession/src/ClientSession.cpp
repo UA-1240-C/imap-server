@@ -4,24 +4,30 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/concept_check.hpp>
 #include <future>
+#include <set>
 
 #include "ImapRequest.h"
+#include "MailDB/IMailDB.h"
 #include "MailDB/PgMailDB.h"
-#include "ImapRequest.h"
 #include "SslSocketWrapper.h"
 
+using ISXImapRequest::ImapParser;
 using ISXSockets::SslSocketWrapper;
+
+using ISXMailDB::Mail;
+
+using ISXMailDB::ReceivedState;
 
 namespace ISXCS
 {
 ClientSession::ClientSession(std::shared_ptr<ISocketWrapper> socket, boost::asio::ssl::context& ssl_context,
                              std::chrono::seconds timeout_duration, boost::asio::io_context& io_context,
                              ISXMailDB::PgManager& pg_manager)
-        : m_io_context(io_context)
-        , m_ssl_context(ssl_context)
-        , m_timeout_duration(timeout_duration)
-        , m_current_state(IMAPState::CONNECTED)
-        , m_database(std::make_unique<ISXMailDB::PgMailDB>(pg_manager))
+    : m_io_context(io_context),
+      m_ssl_context(ssl_context),
+      m_timeout_duration(timeout_duration),
+      m_current_state(ClientState::CONNECTED),
+      m_database(std::make_unique<ISXMailDB::PgMailDB>(pg_manager))
 
 {
     m_socket_wrapper = socket;
@@ -93,9 +99,12 @@ void ClientSession::HandleNewRequest()
 
     m_socket_wrapper->RestartTimeoutTimer(m_timeout_duration);
 
-    try {
+    try
+    {
         ProcessRequest(buffer);
-    } catch (...) {
+    }
+    catch (...)
+    {
         Logger::LogError("Error processing request");
     }
 }
@@ -106,68 +115,61 @@ void ClientSession::ProcessRequest(std::string& buffer)
 
     Logger::LogProd("Command: " + std::to_string(static_cast<int>(request.command)));
     Logger::LogProd("Data: " + request.data);
-    
+
     switch (m_current_state)
     {
-    case IMAPState::CONNECTED:
-        if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
-        {
-            std::string commands = "STARTTLS CAPABILITY";
-            HandleCapability(request, commands);
+        case IMAPState::CONNECTED:
+            if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
+            {
+                std::string commands = "STARTTLS CAPABILITY";
+                HandleCapability(request, commands);
+                return;
+            }
+            else if (request.command == ISXImapRequest::IMAPCommand::STARTTLS)
+            {
+                HandleStartTLS(request);
+                m_current_state = IMAPState::ENCRYPTED;
+            }
+            else
+            {
+                m_socket_wrapper->SendResponseAsync("* ERR bad sequence\r\n").get();
+                return;
+            }
+            break;
+        case IMAPState::ENCRYPTED:
+            if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
+            {break, commands);
+                return;
+            }
+            else if (request.command == ISXImapRequest::IMAPCommand::LOGIN)
+            {
+                HandleLogin(request);
+                m_current_state = IMAPState::AUTHENTICATED;
+                return;
+            }
+            else
+            {
+                m_socket_wrapper->SendResponseAsync("* ERR bad sequence\r\n").get();
+                return;
+            }
+            break;
+        case IMAPState::AUTHENTICATED:
+            if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
+            {
+                std::string commands = "SELECT CAPABILITY";
+                HandleCapability(request, commands);
+                return;
+            }
+            else
+            {
+                m_socket_wrapper->SendResponseAsync("* ERR bad sequence\r\n").get();
+                return;
+            }
+            break;
+        default:
+            /* Unreachable */
+            m_socket_wrapper->SendResponseAsync("* ERR bad sequence\r\n").get();
             return;
-        }
-        else if (request.command == ISXImapRequest::IMAPCommand::STARTTLS)
-        {
-            HandleStartTLS(request);
-            m_current_state = IMAPState::ENCRYPTED;
-        }
-        else
-        {
-            m_socket_wrapper->SendResponseAsync("- ERR bad sequence\r\n").get();
-            return;
-        }
-        break;
-    case IMAPState::ENCRYPTED:
-        if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
-        {
-            std::string commands = "LOGIN CAPABILITY";
-            HandleCapability(request, commands);
-            return;
-        }
-        else if (request.command == ISXImapRequest::IMAPCommand::LOGIN)
-        {
-            HandleLogin(request);
-            m_current_state = IMAPState::AUTHENTICATED;
-            return;
-        }
-        else
-        {
-            m_socket_wrapper->SendResponseAsync("- ERR bad sequence\r\n").get();
-            return;
-        }
-        break;
-    case IMAPState::AUTHENTICATED:
-        if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
-        {
-            std::string commands = "SELECT CAPABILITY";
-            HandleCapability(request, commands);
-            return;
-        }
-        /*else if (request.command == ISXImapRequest::IMAPCommand::SELECT)
-        {
-            HandleSelect(request);
-            return;
-        }*/
-        else
-        {
-            m_socket_wrapper->SendResponseAsync("- ERR bad sequence\r\n").get();
-            return;
-        }
-        break;
-    default:
-        /* Unreachable */
-        m_socket_wrapper->SendResponseAsync("- ERR bad sequence\r\n").get();
-        return;
     }
 }
 
@@ -244,8 +246,8 @@ void ClientSession::HandleStartTLS(ISXImapRequest::ImapRequest& request)
 void ClientSession::HandleCapability(ISXImapRequest::ImapRequest& request, std::string& commands)
 {
     Logger::LogDebug("Entering ClientSession::HandleCapability");
-    std::future<void> wrft =  m_socket_wrapper->SendResponseAsync(
-        "* CAPABILITY [" + commands + "] IMAP server ready\r\n");
+    std::future<void> wrft =
+        m_socket_wrapper->SendResponseAsync("* CAPABILITY [" + commands + "] IMAP server ready\r\n");
 
     try
     {
@@ -300,4 +302,78 @@ void ClientSession::HandleLogin(ISXImapRequest::ImapRequest& request)
 
     Logger::LogDebug("Exiting ClientSession::HandleLogin");
 }
+
+void ClientSession::HandleBye(const ImapRequest& request)
+{
+    Logger::LogProd("Entering ClientSession::HandleBye");
+    try
+    {
+        m_socket_wrapper->SendResponseAsync("BYE");
+        m_socket_wrapper->Close();
+    }
+    catch (const std::exception& e)
+    {
+        Logger::LogError("Exception while closing socket: " + std::string(e.what()));
+    }
+    Logger::LogProd("Exiting ClientSession::HandleBye");
+}
+
+void ClientSession::HandleFetch(const ImapRequest& request)
+{
+    Logger::LogProd("Entering ClientSession::HandleFetch");
+
+    // Парсимо FETCH-запит
+    auto [request_id, message_set, fetch_attribute] = ImapParser::ParseFetchRequest(request.data);
+
+    // Визначаємо, з якої папки отримувати повідомлення (наприклад, Sent)
+    std::string folder_name = "Sent";
+    std::vector<Mail> mails = m_database->RetrieveMessagesFromFolder(folder_name, ReceivedState::FALSE);
+
+    std::string imap_response;
+
+    // Обробка message_set для отримання відповідних індексів
+    std::set<int> indices = ImapParser::ParseMessageSet(message_set);  // Функція, що парсить message_set
+
+    for (int index : indices)
+    {
+        if (index <= 0 || index > mails.size())
+        {
+            Logger::LogError("Message index out of range: " + std::to_string(index));
+            continue;  // Пропустити некоректні індекси
+        }
+
+        const Mail& mail = mails[index - 1];  // Індексація з 0
+
+        if (fetch_attribute == "ENVELOPE")
+        {
+            imap_response += "FROM \"" + mail.sender + "\" ";
+            imap_response += "TO \"" + mail.recipient + "\" ";
+            imap_response += "SUBJECT \"" + mail.subject + "\" ";
+            imap_response += "SENT \"" + mail.sent_at + "\" ";
+        }
+        else if (fetch_attribute == "RFC822")
+        {
+            imap_response += "RFC822 \"" + mail.body + "\" ";
+        }
+        else if (fetch_attribute == "FLAGS")
+        {
+            imap_response += "FLAGS (\\Seen) ";  // Можна змінювати прапори за потреби
+        }
+        else if (fetch_attribute == "BODY[]")
+        {
+            imap_response += "BODY[] \"" + mail.body + "\" ";
+        }
+        else
+        {
+            Logger::LogError("Unknown fetch attribute: " + fetch_attribute);
+            throw std::invalid_argument("Unknown fetch attribute");
+        }
+    }
+
+    // Виводимо або відправляємо відповідь
+    std::cout << imap_response << std::endl;
+
+    Logger::LogProd("Exiting ClientSession::HandleFetch");
+}
+
 }  // namespace ISXCS
