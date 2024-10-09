@@ -13,8 +13,10 @@ CMakeUserPresets.json
 build
 
 .vscode
+.cache
 
 .clang-format
 
 server.crt
 server.key
+server.csr

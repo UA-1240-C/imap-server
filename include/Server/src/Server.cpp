@@ -22,6 +22,7 @@ Server::Server(boost::asio::io_context& io_context, boost::asio::ssl::context& s
     InitializeThreadPool();
     InitializeTimeout();
     ConfigureSslContext();
+    InitializeDatabaseManager();
 }
 
 void Server::Start() { Accept(); }
@@ -42,34 +43,35 @@ void Server::Accept()
     Logger::LogProd("Ready to accept new connections.");
 
     m_acceptor->async_accept(*tcp_socket,
-                             [this, socket_wrapper](const boost::system::error_code& error)
-                             {
-                                 if (error)
-                                 {
-                                     Logger::LogError("Boost error in Server::Accept: " + error.message());
-                                     return;
-                                 }
+        [this, socket_wrapper](const boost::system::error_code& error)
+        {
+            if (error)
+            {
+                Logger::LogError("Boost error in Server::Accept: " + error.message());
+                return;
+            }
 
-                                 Logger::LogProd("Accepted new connection.");
-                                 m_thread_pool->EnqueueDetach(
-                                     [this, socket_wrapper]
-                                     {
-                                         try
-                                         {
-                                             std::unique_ptr<ClientSession> client_session =
-                                                 std::make_unique<ClientSession>(socket_wrapper, m_ssl_context,
-                                                                                 m_timeout_duration, m_io_context);
+            Logger::LogProd("Accepted new connection.");
+            m_thread_pool->EnqueueDetach(
+                [this, socket_wrapper]
+                {
+                    try
+                    {
+                        std::unique_ptr<ClientSession> client_session =
+                        std::make_unique<ClientSession>(socket_wrapper, m_ssl_context,
+                                                     m_timeout_duration, m_io_context, *m_pg_manager);
 
-                                             client_session->PollForRequest();
-                                         }
-                                         catch (const std::exception& e)
-                                         {
-                                             Logger::LogError("Error in Server::Accept: " + std::string(e.what()));
-                                         }
-                                     });
+                        client_session->PollForRequest();
+                    }
+                    catch (const std::exception& e)
+                    {
+                        Logger::LogError("Error in Server::Accept: " + std::string(e.what()));
+                    }
+                }
+            );
 
-                                 Accept();
-                             });
+            Accept();
+        });
 
     Logger::LogDebug("Exiting Accept");
 }
@@ -141,6 +143,27 @@ void Server::ConfigureSslContext()
     m_ssl_context.set_default_verify_paths();
 
     m_ssl_context.set_verify_mode(boost::asio::ssl::verify_peer);
+}
+
+void Server::InitializeDatabaseManager()
+{
+    Logger::LogDebug("Entering ServerInitializer::InitializeDatabaseManager");
+
+    try
+    {
+        m_pg_manager = std::make_unique<ISXMailDB::PgManager>(
+            S_CONNECTION_STRING,
+            "localhost",
+            true
+        );
+    }
+    catch(const std::exception& e)
+    {
+        Logger::LogError("Exception in InitializeDatabaseManager: " + std::string(e.what()));
+        throw;
+    }
+
+    Logger::LogDebug("Exiting ServerInitializer::InitializeDatabaseManager");
 }
 
 }  // namespace ISXSS

@@ -6,6 +6,7 @@ target_link_libraries(Server PRIVATE
     ClientSession
     SocketWrapper
     Parser
+    MailDB
     ${OPENSSL_LIBRARIES}
 )
 
@@ -17,4 +18,5 @@ target_include_directories(Server PUBLIC
         ${CMAKE_SOURCE_DIR}/include/Utils/include
         ${CMAKE_SOURCE_DIR}/include/SocketWrapper/include
         ${CMAKE_SOURCE_DIR}/include/Encoding/include
+        ${CMAKE_SOURCE_DIR}/Database/MailDB/include
 )

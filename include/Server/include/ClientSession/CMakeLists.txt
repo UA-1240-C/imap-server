@@ -6,6 +6,7 @@ add_library(ClientSession  STATIC
 target_link_libraries(ClientSession PRIVATE
     Boost::log
     Boost::log_setup
+    MailDB
     ${OPENSSL_LIBRARIES}
 )
 
@@ -16,4 +17,5 @@ target_include_directories(ClientSession PUBLIC
     ${CMAKE_SOURCE_DIR}/include/Logger/include
     ${CMAKE_SOURCE_DIR}/include/Parser/include
     ${CMAKE_SOURCE_DIR}/include/Utils/include
+    ${CMAKE_SOURCE_DIR}/Database/MailDB/include
 )
