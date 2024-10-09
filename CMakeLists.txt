@@ -37,12 +37,27 @@ if(NOT googletest_POPULATED)
     add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BUILD_DIR})
 endif()
 
+if (NOT TARGET pqxx)
+    FetchContent_Declare(
+            libpqxx
+            GIT_REPOSITORY https://github.com/jtv/libpqxx.git
+            GIT_TAG 7.9.2
+    )
+
+    # Disable tests for libpqxx
+    set(SKIP_BUILD_TEST ON CACHE BOOL "Skip build tests" FORCE)
+
+    FetchContent_MakeAvailable(libpqxx)
+endif()
+
 add_subdirectory(include/SocketWrapper)
 add_subdirectory(include/Logger)
 add_subdirectory(include/Parser)
 add_subdirectory(include/Utils)
 add_subdirectory(include/Server)
 add_subdirectory(include/Server/include/ClientSession)
+add_subdirectory(DataBase/MailDB)
+
 
 add_executable(IMAP_server src/main.cpp)
 
@@ -57,6 +72,7 @@ target_link_libraries(IMAP_server PRIVATE
     Boost::log
     Boost::thread
     Boost::log_setup
+    MailDB
     ${OPENSSL_LIBRARIES}
 )
 

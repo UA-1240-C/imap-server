@@ -4,7 +4,7 @@ namespace ISXImapRequest
 ImapParser ImapParser::Parse(const std::string& request) 
 {
     ImapRequest imap_request;
-    imap_request.data = request;
+zquest.data = request;
 
     if (request.find("CAPABILITY") == 0)
     {
