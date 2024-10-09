@@ -5,7 +5,6 @@
 #include <string>
 #include <fstream>
 #include "JSONParser.h"
-#include <cstdint>
 
 class Config {
 public:

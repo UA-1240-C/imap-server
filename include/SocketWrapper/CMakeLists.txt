@@ -5,6 +5,9 @@ add_library(SocketWrapper
 
 target_include_directories(SocketWrapper PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/SocketWrapper/include
+    ${CMAKE_SOURCE_DIR}/include/Logger/include
+    ${CMAKE_SOURCE_DIR}/include/Parser/include
 )
 
 target_link_libraries(SocketWrapper PRIVATE

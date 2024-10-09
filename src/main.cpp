@@ -28,6 +28,5 @@ int main() {
     } catch (const std::exception& e) {
         Logger::LogError("Exception caught in entry point: " + std::string(e.what()));
     }
-
     return 0;
 }

@@ -44,6 +44,21 @@ add_subdirectory(include/Utils)
 add_subdirectory(include/Server)
 add_subdirectory(include/Server/include/ClientSession)
 
+if (NOT TARGET pqxx)
+    FetchContent_Declare(
+            libpqxx
+            GIT_REPOSITORY https://github.com/jtv/libpqxx.git
+            GIT_TAG 7.9.2
+    )
+
+    # Disable tests for libpqxx
+    set(SKIP_BUILD_TEST ON CACHE BOOL "Skip build tests" FORCE)
+
+    FetchContent_MakeAvailable(libpqxx)
+endif()
+
+add_subdirectory(DataBase/MailDB)
+
 add_executable(IMAP_server src/main.cpp)
 
 target_link_libraries(IMAP_server PRIVATE
@@ -58,6 +73,7 @@ target_link_libraries(IMAP_server PRIVATE
     Boost::thread
     Boost::log_setup
     ${OPENSSL_LIBRARIES}
+    MailDB
 )
 
 target_include_directories(IMAP_server PRIVATE
@@ -67,6 +83,7 @@ target_include_directories(IMAP_server PRIVATE
     ${CMAKE_SOURCE_DIR}/include/Logger/include
     ${CMAKE_SOURCE_DIR}/include/Server/include
     ${CMAKE_SOURCE_DIR}/include/Server/include/ClientSession/include
+    ${CMAKE_SOURCE_DIR}/DataBase/include
     ${OPENSSL_INCLUDE_DIR}
     ${Boost_INCLUDE_DIRS}
 )
