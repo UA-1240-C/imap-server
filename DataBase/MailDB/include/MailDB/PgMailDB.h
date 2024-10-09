@@ -106,6 +106,7 @@ public:
     std::vector<Mail> RetrieveMessagesFromFolder(const std::string_view folder_name, const ReceivedState& is_received) override;
     std::vector<Mail> RetrieveMessagesFromFolderWithFlags(const std::string_view folder_name, FlagsSearchBy& flags, const ReceivedState& is_received) override;
     std::vector<uint32_t> RetrieveMessagesWithSenderAndDate(const std::string_view from, std::chrono::system_clock::time_point& date) override;
+
     
 protected:
     /**
