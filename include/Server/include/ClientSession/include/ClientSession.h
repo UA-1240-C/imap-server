@@ -5,6 +5,7 @@
 #include "MailDB/PgManager.h"
 #include "Server.h"
 #include "MailDB/MailException.h"
+#include "ImapRequest.h"
 
 using ISXMailDB::MailException;
 using ISXSockets::ISocketWrapper;
@@ -38,8 +39,8 @@ private:
 
     std::future<void> AsyncPerformHandshake();
 
-    void HandleCapability();
-    void HandleLogin();
+    void HandleCapability(ISXImapRequest::ImapRequest& request);
+    void HandleLogin(ISXImapRequest::ImapRequest& request);
 
 private:
     IMAPState m_current_state;
