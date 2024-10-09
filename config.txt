@@ -1,0 +1,25 @@
+{
+  "root": {
+    "Server": {
+      "servername": "ServTest",
+      "serverdisplayname": "ServTestserver",
+      "listenerport": 2525,
+      "ipaddress": "127.0.0.1"
+    },
+    "communicationsettings": {
+      "blocking": 0,
+      "socket_timeout": 15
+    },
+    "logging": {
+      "filename": "serverlog.txt",
+      "LogLevel": 2,
+      "flush": 0
+    },
+    "time": {
+      "Period_time": 30
+    },
+    "threadpool": {
+      "maxworkingthreads": 10
+    }
+  }
+}

@@ -4,7 +4,9 @@ project(IMAP_server VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Boost REQUIRED COMPONENTS system log log_setup)
+find_package(Boost REQUIRED COMPONENTS system thread log log_setup)
+find_package(OpenSSL REQUIRED)
+
 
 include(FetchContent)
 
@@ -17,6 +19,14 @@ if (NOT Boost_FOUND)
     FetchContent_MakeAvailable(boost)
 endif()
 
+if (NOT OpenSSL_FOUND)
+    FetchContent_Declare(
+            openssl
+            GIT_REPOSITORY https://github.com/openssl/openssl.git
+            GIT_TAG OpenSSL_1_1_1k
+    )
+    FetchContent_MakeAvailable(openssl)
+endif()
 
 FetchContent_Declare(googletest
 	GIT_REPOSITORY https://github.com/google/googletest
@@ -31,6 +41,8 @@ add_subdirectory(include/SocketWrapper)
 add_subdirectory(include/Logger)
 add_subdirectory(include/Parser)
 add_subdirectory(include/Utils)
+add_subdirectory(include/Server)
+add_subdirectory(include/Server/include/ClientSession)
 
 if (NOT TARGET pqxx)
     FetchContent_Declare(
@@ -53,11 +65,15 @@ target_link_libraries(IMAP_server PRIVATE
     SocketWrapper
     Parser
     Logger
+    Server
     Utils
-    MailDB
+    ClientSession
     Boost::system
     Boost::log
+    Boost::thread
     Boost::log_setup
+    ${OPENSSL_LIBRARIES}
+    MailDB
 )
 
 target_include_directories(IMAP_server PRIVATE
@@ -65,6 +81,9 @@ target_include_directories(IMAP_server PRIVATE
     ${CMAKE_SOURCE_DIR}/include/Utils/include
     ${CMAKE_SOURCE_DIR}/include/Parser/include
     ${CMAKE_SOURCE_DIR}/include/Logger/include
+    ${CMAKE_SOURCE_DIR}/include/Server/include
+    ${CMAKE_SOURCE_DIR}/include/Server/include/ClientSession/include
     ${CMAKE_SOURCE_DIR}/DataBase/include
+    ${OPENSSL_INCLUDE_DIR}
     ${Boost_INCLUDE_DIRS}
 )

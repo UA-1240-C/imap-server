@@ -15,3 +15,6 @@ build
 .vscode
 
 .clang-format
+
+server.crt
+server.key

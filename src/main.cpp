@@ -1,43 +1,32 @@
-#include <iostream>
-#include <vector>
+#include <boost/asio.hpp>
 
-#include "MailDB/PgMailDB.h"
-#include "MailDB/PgManager.h"
+#include "Logger.h"
+#include "Server.h"
+
+using boost::asio::ip::tcp;
+using namespace ISXSS;
 
 int main() {
+    try {
+        // Server setup
+        boost::asio::io_context io_context;
+        boost::asio::ssl::context ssl_context(boost::asio::ssl::context::tlsv12_server);
 
-    ISXMailDB::PgManager manager(
-        "postgresql://postgres.qotrdwfvknwbfrompcji:"
-        "yUf73LWenSqd9Lt4@aws-0-eu-central-1.pooler."
-        "supabase.com:6543/postgres?sslmode=require",
-            "localhost",
-            true);
+        // Load server certificates and private key
+        #ifdef _WIN32
+        ssl_context.use_certificate_chain_file("server.crt");    // public key
+        ssl_context.use_private_key_file("server.key", boost::asio::ssl::context::pem);
+        #else
+        ssl_context.use_certificate_chain_file("../server.crt");    // public key
+        ssl_context.use_private_key_file("../server.key", boost::asio::ssl::context::pem);
+        #endif
 
-    ISXMailDB::PgMailDB db(manager);
+        Server server(io_context, ssl_context);
+        server.Start();
 
-    db.Login("user@gmail.com2", "password");
-
-    // std::vector<ISXMailDB::Mail> mails = db.RetrieveEmails(true);
-
-    // Custom date: 2024-10-08
-    std::tm custom_tm = {};
-    int year = 2024;
-    int month = 10;
-
-    custom_tm.tm_year = year - 1900;
-    custom_tm.tm_mon = month - 1;
-    custom_tm.tm_mday = 8;
-
-    std::time_t time = std::mktime(&custom_tm);
-    std::chrono::system_clock::time_point custom_time_point = std::chrono::system_clock::from_time_t(time);
-
-    // Call function with custom time
-    auto messages = db.RetrieveMessagesWithSenderAndDate("user@gmail.com", custom_time_point);
-
-    for (const auto& id : messages) {
-        std::cout << "Message ID: " << id << std::endl;
+        io_context.run();
+    } catch (const std::exception& e) {
+        Logger::LogError("Exception caught in entry point: " + std::string(e.what()));
     }
-
-
     return 0;
 }
