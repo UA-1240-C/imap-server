@@ -1,18 +1,19 @@
 #ifndef CLIENT_SESSION_H
 #define CLIENT_SESSION_H
 
+#include "ImapRequest.h"
+#include "MailDB/MailException.h"
 #include "MailDB/PgMailDB.h"
 #include "MailDB/PgManager.h"
 #include "Server.h"
-#include "MailDB/MailException.h"
 
+using ISXImapRequest::ImapRequest;
 using ISXMailDB::MailException;
 using ISXSockets::ISocketWrapper;
 
-enum class IMAPState
+enum class ClientState
 {
     CONNECTED,
-    ENCRYPTED,
     AUTHENTICATED,
     SELECTED,
     FETCHING,
@@ -34,15 +35,17 @@ public:
 
 private:
     void HandleNewRequest();
-    // void ProcessRequest();
+    void ProcessRequest(const ImapRequest& request);
 
     std::future<void> AsyncPerformHandshake();
 
-    void HandleCapability();
-    void HandleLogin();
+    void HandleCapability(const ImapRequest& request);
+    void HandleLogin(const ImapRequest& request);
+    void HandleBye(const ImapRequest& request);
+    void HandleFetch(const ImapRequest& request);
 
 private:
-    IMAPState m_current_state;
+    ClientState m_current_state;
 
 private:
     std::shared_ptr<ISocketWrapper> m_socket_wrapper;

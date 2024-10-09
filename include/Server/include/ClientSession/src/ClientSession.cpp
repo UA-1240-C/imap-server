@@ -2,22 +2,29 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <set>
 
+#include "MailDB/IMailDB.h"
 #include "MailDB/PgMailDB.h"
-
 #include "SslSocketWrapper.h"
+
+using ISXImapRequest::ImapParser;
 using ISXSockets::SslSocketWrapper;
+
+using ISXMailDB::Mail;
+
+using ISXMailDB::ReceivedState;
 
 namespace ISXCS
 {
 ClientSession::ClientSession(std::shared_ptr<ISocketWrapper> socket, boost::asio::ssl::context& ssl_context,
                              std::chrono::seconds timeout_duration, boost::asio::io_context& io_context,
                              ISXMailDB::PgManager& pg_manager)
-        : m_io_context(io_context)
-        , m_ssl_context(ssl_context)
-        , m_timeout_duration(timeout_duration)
-        , m_current_state(IMAPState::CONNECTED)
-        , m_database(std::make_unique<ISXMailDB::PgMailDB>(pg_manager))
+    : m_io_context(io_context),
+      m_ssl_context(ssl_context),
+      m_timeout_duration(timeout_duration),
+      m_current_state(ClientState::CONNECTED),
+      m_database(std::make_unique<ISXMailDB::PgMailDB>(pg_manager))
 
 {
     m_socket_wrapper = socket;
@@ -78,19 +85,37 @@ void ClientSession::HandleNewRequest()
     current_line.append(buffer);
 
     std::size_t pos;
-    while ((pos = current_line.find(ISocketWrapper::CRLF)) != std::string::npos)
+    while ((pos = current_line.find(".")) != std::string::npos)  // Шукаємо до '.'
     {
-        std::string line = current_line.substr(0, pos);
-        current_line.erase(0, pos + std::string(ISocketWrapper::CRLF).length());
+        std::string line = current_line.substr(0, pos);  // Обрізаємо рядок до '.'
+        current_line.erase(0, pos + 1);  // Видаляємо оброблений рядок і '.' з current_line
 
-        try
+        // Якщо line не порожній, обробляємо запит
+        if (!line.empty())
         {
-            // ProcessRequest()
-        }
-        catch (const std::exception& e)
-        {
+            try
+            {
+                Logger::LogProd("Line" + line);
+
+                ProcessRequest(ImapParser::Parse(line));
+                Logger::LogProd("Processed request successfully");
+            }
+            catch (const std::exception& e)
+            {
+                Logger::LogError("Error processing request: " + std::string(e.what()));
+            }
         }
     }
+}
+
+void ClientSession::ProcessRequest(const ImapRequest& request)
+{
+    if (ImapParser::CommandToString(request.command) == "FETCH")
+    {
+        HandleFetch(request);
+    }
+        //std::cout << "command: " << ImapParser::CommandToString(request.command) << "\ndata: " << request.data
+        //          << std::endl;
 }
 
 std::future<void> ClientSession::AsyncPerformHandshake()
@@ -143,11 +168,10 @@ std::future<void> ClientSession::AsyncPerformHandshake()
     return future;
 }
 
-void ClientSession::HandleCapability()
+void ClientSession::HandleCapability(const ImapRequest& request)
 {
     Logger::LogDebug("Entering ClientSession::HandleCapability");
-    std::future<void> wrft =  m_socket_wrapper->SendResponseAsync(
-        "* CAPABILITY IMAP4rev1 STARTTLS\r\n");
+    std::future<void> wrft = m_socket_wrapper->SendResponseAsync("* CAPABILITY IMAP4rev1 STARTTLS\r\n");
 
     try
     {
@@ -161,6 +185,79 @@ void ClientSession::HandleCapability()
     }
 
     Logger::LogDebug("Exiting ClientSession::HandleCapability");
+}
+
+void ClientSession::HandleBye(const ImapRequest& request)
+{
+    Logger::LogProd("Entering ClientSession::HandleBye");
+    try
+    {
+        m_socket_wrapper->SendResponseAsync("BYE");
+        m_socket_wrapper->Close();
+    }
+    catch (const std::exception& e)
+    {
+        Logger::LogError("Exception while closing socket: " + std::string(e.what()));
+    }
+    Logger::LogProd("Exiting ClientSession::HandleBye");
+}
+
+void ClientSession::HandleFetch(const ImapRequest& request)
+{
+    Logger::LogProd("Entering ClientSession::HandleFetch");
+
+    // Парсимо FETCH-запит
+    auto [request_id, message_set, fetch_attribute] = ImapParser::ParseFetchRequest(request.data);
+
+    // Визначаємо, з якої папки отримувати повідомлення (наприклад, Sent)
+    std::string folder_name = "Sent";
+    std::vector<Mail> mails = m_database->RetrieveMessagesFromFolder(folder_name, ReceivedState::FALSE);
+
+    std::string imap_response;
+
+    // Обробка message_set для отримання відповідних індексів
+    std::set<int> indices = ImapParser::ParseMessageSet(message_set);  // Функція, що парсить message_set
+
+    for (int index : indices)
+    {
+        if (index <= 0 || index > mails.size())
+        {
+            Logger::LogError("Message index out of range: " + std::to_string(index));
+            continue;  // Пропустити некоректні індекси
+        }
+
+        const Mail& mail = mails[index - 1];  // Індексація з 0
+
+        if (fetch_attribute == "ENVELOPE")
+        {
+            imap_response += "FROM \"" + mail.sender + "\" ";
+            imap_response += "TO \"" + mail.recipient + "\" ";
+            imap_response += "SUBJECT \"" + mail.subject + "\" ";
+            imap_response += "SENT \"" + mail.sent_at + "\" ";
+        }
+        else if (fetch_attribute == "RFC822")
+        {
+            imap_response += "RFC822 \"" + mail.body + "\" ";
+        }
+        else if (fetch_attribute == "FLAGS")
+        {
+            imap_response += "FLAGS (\\Seen) ";  // Можна змінювати прапори за потреби
+        }
+        else if (fetch_attribute == "BODY[]")
+        {
+            imap_response += "BODY[] \"" + mail.body + "\" ";
+        }
+        else
+        {
+            Logger::LogError("Unknown fetch attribute: " + fetch_attribute);
+            throw std::invalid_argument("Unknown fetch attribute");
+        }
+    }
+
+    // Виводимо або відправляємо відповідь
+    std::cout << imap_response << std::endl;
+
+    Logger::LogProd("Exiting ClientSession::HandleFetch");
 }
 
 }  // namespace ISXCS
