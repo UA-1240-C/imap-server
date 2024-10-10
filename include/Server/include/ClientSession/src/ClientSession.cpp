@@ -332,22 +332,22 @@ void ClientSession::HandleFetch(const ImapRequest& request)
 
     auto [request_id, message_set, fetch_attribute] = ImapParser::ParseFetchRequest(request.data);
 
-    std::string folder_name = "Sent";
+    std::string folder_name = "Inbox";
     std::vector<Mail> mails = m_database->RetrieveMessagesFromFolder(folder_name, ReceivedState::FALSE);
 
     std::string imap_response;
 
-    std::set<int> indices = ImapParser::ParseMessageSet(message_set);  
+    std::set<int> indices = ImapParser::ParseMessageSet(message_set, mails.size());
 
     for (int index : indices)
     {
         if (index <= 0 || index > mails.size())
         {
             Logger::LogError("Message index out of range: " + std::to_string(index));
-            continue; 
+            continue;
         }
 
-        const Mail& mail = mails[index - 1];  
+        const Mail& mail = mails[index - 1];
         if (fetch_attribute == "ENVELOPE")
         {
             imap_response += "FROM \"" + mail.sender + "\" ";
@@ -361,7 +361,7 @@ void ClientSession::HandleFetch(const ImapRequest& request)
         }
         else if (fetch_attribute == "FLAGS")
         {
-            imap_response += "FLAGS (\\Seen) "; 
+            imap_response += "FLAGS (\\Seen) ";
         }
         else if (fetch_attribute == "BODY[]")
         {

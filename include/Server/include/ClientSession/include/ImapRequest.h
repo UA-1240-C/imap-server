@@ -60,7 +60,7 @@ public:
         return {request_id, message_set, fetch_attribute};
     }
 
-    inline static std::set<int> ParseMessageSet(const std::string& message_set)
+    inline static std::set<int> ParseMessageSet(const std::string& message_set, int max_index)
     {
         std::set<int> indices;
         std::istringstream iss(message_set);
@@ -72,8 +72,18 @@ public:
             {
                 auto range = token.substr(0, token.find(':'));
                 auto end = token.substr(token.find(':') + 1);
+
                 int start_index = std::stoi(range);
-                int end_index = std::stoi(end);
+                int end_index;
+
+                if (end == "max")
+                {
+                    end_index = max_index;
+                }
+                else
+                {
+                    end_index = std::stoi(end);
+                }
 
                 for (int i = start_index; i <= end_index; ++i)
                 {
