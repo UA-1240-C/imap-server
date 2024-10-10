@@ -26,7 +26,7 @@ ClientSession::ClientSession(std::shared_ptr<ISocketWrapper> socket, boost::asio
     : m_io_context(io_context),
       m_ssl_context(ssl_context),
       m_timeout_duration(timeout_duration),
-      m_current_state(ClientState::CONNECTED),
+      m_current_state(IMAPState::CONNECTED),
       m_database(std::make_unique<ISXMailDB::PgMailDB>(pg_manager))
 
 {
@@ -138,7 +138,9 @@ void ClientSession::ProcessRequest(std::string& buffer)
             break;
         case IMAPState::ENCRYPTED:
             if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
-            {break, commands);
+            {
+                std::string commands = "LOGIN CAPABILITY";
+                HandleCapability(request, commands);
                 return;
             }
             else if (request.command == ISXImapRequest::IMAPCommand::LOGIN)
@@ -156,8 +158,14 @@ void ClientSession::ProcessRequest(std::string& buffer)
         case IMAPState::AUTHENTICATED:
             if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
             {
-                std::string commands = "SELECT CAPABILITY";
+                std::string commands = "FETCH CAPABILITY";
                 HandleCapability(request, commands);
+                return;
+            }
+            else if (request.command == ISXImapRequest::IMAPCommand::FETCH)
+            {
+                HandleFetch(request);
+                m_current_state = IMAPState::FETCHING;
                 return;
             }
             else
@@ -168,7 +176,7 @@ void ClientSession::ProcessRequest(std::string& buffer)
             break;
         default:
             /* Unreachable */
-            m_socket_wrapper->SendResponseAsync("* ERR bad sequence\r\n").get();
+            m_socket_wrapper->SendResponseAsync("- ERR bad sequence\r\n").get();
             return;
     }
 }
@@ -322,28 +330,24 @@ void ClientSession::HandleFetch(const ImapRequest& request)
 {
     Logger::LogProd("Entering ClientSession::HandleFetch");
 
-    // Парсимо FETCH-запит
     auto [request_id, message_set, fetch_attribute] = ImapParser::ParseFetchRequest(request.data);
 
-    // Визначаємо, з якої папки отримувати повідомлення (наприклад, Sent)
     std::string folder_name = "Sent";
     std::vector<Mail> mails = m_database->RetrieveMessagesFromFolder(folder_name, ReceivedState::FALSE);
 
     std::string imap_response;
 
-    // Обробка message_set для отримання відповідних індексів
-    std::set<int> indices = ImapParser::ParseMessageSet(message_set);  // Функція, що парсить message_set
+    std::set<int> indices = ImapParser::ParseMessageSet(message_set);  
 
     for (int index : indices)
     {
         if (index <= 0 || index > mails.size())
         {
             Logger::LogError("Message index out of range: " + std::to_string(index));
-            continue;  // Пропустити некоректні індекси
+            continue; 
         }
 
-        const Mail& mail = mails[index - 1];  // Індексація з 0
-
+        const Mail& mail = mails[index - 1];  
         if (fetch_attribute == "ENVELOPE")
         {
             imap_response += "FROM \"" + mail.sender + "\" ";
@@ -357,7 +361,7 @@ void ClientSession::HandleFetch(const ImapRequest& request)
         }
         else if (fetch_attribute == "FLAGS")
         {
-            imap_response += "FLAGS (\\Seen) ";  // Можна змінювати прапори за потреби
+            imap_response += "FLAGS (\\Seen) "; 
         }
         else if (fetch_attribute == "BODY[]")
         {
@@ -370,8 +374,7 @@ void ClientSession::HandleFetch(const ImapRequest& request)
         }
     }
 
-    // Виводимо або відправляємо відповідь
-    std::cout << imap_response << std::endl;
+    m_socket_wrapper->SendResponseAsync(std::string("*  ") + imap_response + "\r\n").get();
 
     Logger::LogProd("Exiting ClientSession::HandleFetch");
 }

@@ -42,9 +42,7 @@ public:
     static std::string ExtractCommand(const std::string& request);
     static std::pair<std::string, std::string> ExtractUserAndPass(const std::string& request);
 
-    static std::string ExtractCommand(const std::string& request);
-
-    static std::tuple<std::string, std::string, std::string> ParseFetchRequest(const std::string& raw_request)
+    inline static std::tuple<std::string, std::string, std::string> ParseFetchRequest(const std::string& raw_request)
     {
         std::istringstream iss(raw_request);
         std::string command, message_set, fetch_attribute, request_id;
@@ -62,7 +60,7 @@ public:
         return {request_id, message_set, fetch_attribute};
     }
 
-    static std::set<int> ParseMessageSet(const std::string& message_set)
+    inline static std::set<int> ParseMessageSet(const std::string& message_set)
     {
         std::set<int> indices;
         std::istringstream iss(message_set);
@@ -70,7 +68,7 @@ public:
 
         while (std::getline(iss, token, ','))
         {
-            if (token.find(':') != std::string::npos)  // Діапазон
+            if (token.find(':') != std::string::npos)
             {
                 auto range = token.substr(0, token.find(':'));
                 auto end = token.substr(token.find(':') + 1);
@@ -91,7 +89,7 @@ public:
         return indices;
     }
 
-    static std::string CommandToString(IMAPCommand command)
+    inline static std::string CommandToString(IMAPCommand command)
     {
         switch (command)
         {
@@ -110,7 +108,7 @@ public:
             case IMAPCommand::UNKNOWN:
                 return "UNKNOWN";
             default:
-                return "INVALID COMMAND";  // На випадок, якщо значення не відповідає жодному з перерахованих
+                return "INVALID COMMAND";
         }
     }
 };
