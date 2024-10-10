@@ -1,6 +1,7 @@
 #ifndef CLIENT_SESSION_H
 #define CLIENT_SESSION_H
 
+#include "ImapRequest.h"
 #include "MailDB/PgMailDB.h"
 #include "MailDB/PgManager.h"
 #include "Server.h"
@@ -35,11 +36,12 @@ public:
 
 private:
     void HandleNewRequest();
-    // void ProcessRequest();
+    void ProcessRequest(std::string& buffer);
 
     std::future<void> AsyncPerformHandshake();
 
-    void HandleCapability(ISXImapRequest::ImapRequest& request);
+    void HandleStartTLS(ISXImapRequest::ImapRequest& request);
+    void HandleCapability(ISXImapRequest::ImapRequest& request, std::string& commands);
     void HandleLogin(ISXImapRequest::ImapRequest& request);
 
 private:

@@ -1,5 +1,5 @@
 #include "ImapRequest.h"
-
+#include <iostream>
 #include <regex>
 
 namespace ISXImapRequest
@@ -9,31 +9,25 @@ ImapRequest ImapParser::Parse(const std::string& request)
     ImapRequest imap_request;
     imap_request.data = request;
 
-    std::regex regex("^\\S+\\s+(\\S.*?)(?:\\s.*)?$");
+    std::cout << "Before ExtractCommand" << std::endl;
+    std::string command = ExtractCommand(request);
+    std::cout << "After ExtractCommand" << std::endl;
 
-    if (ExtractCommand(request) == "STARTTLS")
+    if (command == "STARTTLS")
     {
         imap_request.command = IMAPCommand::STARTTLS;
     }
-    else if (request.find("SELECT") == 0)
+    else if (command == "LOGIN")
     {
-        imap_request.command = IMAPCommand::SELECT;
+        imap_request.command = IMAPCommand::LOGIN;
     }
-    else if (request.find("FETCH") == 0)
-    {
-        imap_request.command = IMAPCommand::FETCH;
-    }
-    else if (request.find("BYE") == 0)
-    {
-        imap_request.command = IMAPCommand::BYE;
-    }
-    else if (request.find("CAPABILITY") == 0)
+    else if (command == "CAPABILITY")
     {
         imap_request.command = IMAPCommand::CAPABILITY;
     }
-    else if (request.find("LOGIN") == 0)
+    else
     {
-        imap_request.command = IMAPCommand::LOGIN;
+        throw std::runtime_error("Invalid command");
     }
 
     return imap_request;
@@ -41,28 +35,33 @@ ImapRequest ImapParser::Parse(const std::string& request)
 
 std::string ImapParser::ExtractCommand(const std::string& request)
 {
-    std::regex regex("^\\S+\\s+(\\S.*?)(?:\\s.*)?$");
+    std::regex pattern(R"((^(\*|\w+)\s+([A-Z]+)\s*(.*)\r?\n?))");
     std::smatch match;
 
-    if (std::regex_search(request, match, regex))
+    if (std::regex_search(request, match, pattern))
     {
-        return match[1];
+        return match[3];
     }
-
-    return "";
+    else
+    {
+        throw std::runtime_error("Invalid command");
+    }
 }
 
 std::pair<std::string, std::string> ImapParser::ExtractUserAndPass(const std::string& request)
 {
-    std::regex regex("^[A-Za-z0-9]+ LOGIN (\\S+) \"(.*)");
+    std::regex pattern(R"(^([A]\d+)\s+(LOGIN)\s+([^\s]+)\s+([^"]+)$)");
+
     std::smatch match;
 
-    if (std::regex_search(request, match, regex))
+    if (std::regex_search(request, match, pattern))
     {
-        return std::pair<std::string, std::string>(match[1], match[2]);
+        return std::pair<std::string, std::string>(match[3], match[4]);
     }
-
-    return std::pair<std::string, std::string>("", "");
+    else
+    {
+        throw std::runtime_error("Invalid command");
+    }
 }
 
 }  // namespace ISXImapRequest
