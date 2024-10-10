@@ -165,7 +165,6 @@ void ClientSession::ProcessRequest(std::string& buffer)
             else if (request.command == ISXImapRequest::IMAPCommand::FETCH)
             {
                 HandleFetch(request);
-                m_current_state = IMAPState::FETCHING;
                 return;
             }
             else
