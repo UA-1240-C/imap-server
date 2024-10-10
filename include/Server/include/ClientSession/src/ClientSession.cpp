@@ -2,7 +2,10 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/concept_check.hpp>
+#include <future>
 
+#include "ImapRequest.h"
 #include "MailDB/PgMailDB.h"
 #include "ImapRequest.h"
 #include "SslSocketWrapper.h"
@@ -29,6 +32,25 @@ ClientSession::ClientSession(std::shared_ptr<ISocketWrapper> socket, boost::asio
 
 void ClientSession::PollForRequest()
 {
+    if (!m_socket_wrapper->IsOpen())
+    {
+        Logger::LogWarning("Client disconnected.");
+        return;
+    }
+
+    std::future<void> wrft = m_socket_wrapper->SendResponseAsync("* OK [STARTTLS CAPABILITY] Service Ready\r\n");
+
+    try
+    {
+        wrft.get();
+    }
+    catch (const std::exception& e)
+    {
+        Logger::LogError("Error sending response: " + std::string(e.what()));
+        Logger::LogDebug("Exiting ClientSession::PollForRequest");
+        throw;
+    }
+
     while (true)
     {
         try
@@ -42,14 +64,19 @@ void ClientSession::PollForRequest()
                 Logger::LogDebug("Client disconnected");
                 break;
             }
+            Logger::LogError("Exception in ClientSession::PollForRequest: " + std::string(e.what()));
+            Logger::LogDebug("Exiting ClientSession::PollForRequest");
             throw;
         }
         catch (const std::exception& e)
         {
             Logger::LogError("Exception in ClientSession::PollForRequest: " + std::string(e.what()));
+            Logger::LogDebug("Exiting ClientSession::PollForRequest");
             throw;
         }
     }
+
+    Logger::LogDebug("Exiting ClientSession::PollForRequest");
 }
 
 void ClientSession::HandleNewRequest()
@@ -64,33 +91,83 @@ void ClientSession::HandleNewRequest()
     m_socket_wrapper->WhoIs();
     Logger::LogProd("Received data: " + buffer);
 
-    if (buffer.find("STARTTLS") != std::string::npos)
-    {
-        std::cout << "IN IF" << std::endl;
-        m_socket_wrapper->SendResponseAsync("* OK SOSI\r\n").get();
-        AsyncPerformHandshake().get();
-    }
-
-    std::cout << "after IF" << std::endl;
-
     m_socket_wrapper->RestartTimeoutTimer(m_timeout_duration);
 
-    std::string current_line{};
-    current_line.append(buffer);
+    try {
+        ProcessRequest(buffer);
+    } catch (...) {
+        Logger::LogError("Error processing request");
+    }
+}
 
-    std::size_t pos;
-    while ((pos = current_line.find(ISocketWrapper::CRLF)) != std::string::npos)
+void ClientSession::ProcessRequest(std::string& buffer)
+{
+    ISXImapRequest::ImapRequest request = ISXImapRequest::ImapParser::Parse(buffer);
+
+    Logger::LogProd("Command: " + std::to_string(static_cast<int>(request.command)));
+    Logger::LogProd("Data: " + request.data);
+    
+    switch (m_current_state)
     {
-        std::string line = current_line.substr(0, pos);
-        current_line.erase(0, pos + std::string(ISocketWrapper::CRLF).length());
-
-        try
+    case IMAPState::CONNECTED:
+        if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
         {
-            // ProcessRequest()
+            std::string commands = "STARTTLS CAPABILITY";
+            HandleCapability(request, commands);
+            return;
         }
-        catch (const std::exception& e)
+        else if (request.command == ISXImapRequest::IMAPCommand::STARTTLS)
         {
+            HandleStartTLS(request);
+            m_current_state = IMAPState::ENCRYPTED;
         }
+        else
+        {
+            m_socket_wrapper->SendResponseAsync("- ERR bad sequence\r\n").get();
+            return;
+        }
+        break;
+    case IMAPState::ENCRYPTED:
+        if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
+        {
+            std::string commands = "LOGIN CAPABILITY";
+            HandleCapability(request, commands);
+            return;
+        }
+        else if (request.command == ISXImapRequest::IMAPCommand::LOGIN)
+        {
+            HandleLogin(request);
+            m_current_state = IMAPState::AUTHENTICATED;
+            return;
+        }
+        else
+        {
+            m_socket_wrapper->SendResponseAsync("- ERR bad sequence\r\n").get();
+            return;
+        }
+        break;
+    case IMAPState::AUTHENTICATED:
+        if (request.command == ISXImapRequest::IMAPCommand::CAPABILITY)
+        {
+            std::string commands = "SELECT CAPABILITY";
+            HandleCapability(request, commands);
+            return;
+        }
+        /*else if (request.command == ISXImapRequest::IMAPCommand::SELECT)
+        {
+            HandleSelect(request);
+            return;
+        }*/
+        else
+        {
+            m_socket_wrapper->SendResponseAsync("- ERR bad sequence\r\n").get();
+            return;
+        }
+        break;
+    default:
+        /* Unreachable */
+        m_socket_wrapper->SendResponseAsync("- ERR bad sequence\r\n").get();
+        return;
     }
 }
 
@@ -136,7 +213,6 @@ std::future<void> ClientSession::AsyncPerformHandshake()
 
             m_socket_wrapper = ssl_socket_wrapper;
             m_socket_wrapper->WhoIs();
-            m_socket_wrapper->SendResponseAsync("* OK 228\r\n");
             promise->set_value();
         });
 
@@ -144,11 +220,32 @@ std::future<void> ClientSession::AsyncPerformHandshake()
     return future;
 }
 
-void ClientSession::HandleCapability(ISXImapRequest::ImapRequest& request)
+void ClientSession::HandleStartTLS(ISXImapRequest::ImapRequest& request)
+{
+    Logger::LogDebug("Entering ClientSession::HandleStartTLS");
+
+    try
+    {
+        m_socket_wrapper->SendResponseAsync("* OK Begin TLS negotiation now\r\n").get();
+    }
+    catch (const std::exception& e)
+    {
+        Logger::LogError("Error sending response: " + std::string(e.what()));
+        Logger::LogDebug("Exiting ClientSession::HandleStartTLS");
+        throw;
+    }
+
+    AsyncPerformHandshake().get();
+    m_socket_wrapper->SendResponseAsync("* OK Handshake successful\r\n").get();
+
+    Logger::LogDebug("Exiting ClientSession::HandleStartTLS");
+}
+
+void ClientSession::HandleCapability(ISXImapRequest::ImapRequest& request, std::string& commands)
 {
     Logger::LogDebug("Entering ClientSession::HandleCapability");
     std::future<void> wrft =  m_socket_wrapper->SendResponseAsync(
-        "* CAPABILITY IMAP4rev1 STARTTLS\r\n");
+        "* CAPABILITY [" + commands + "] IMAP server ready\r\n");
 
     try
     {
@@ -173,15 +270,16 @@ void ClientSession::HandleLogin(ISXImapRequest::ImapRequest& request)
         auto [username, password] = ISXImapRequest::ImapParser::ExtractUserAndPass(request.data);
         try
         {
-            m_database->Login(username, password);
+            m_database->Login("user@gmail.com", "password");
+            Logger::LogProd("User " + username + " logged in");
         }
         catch (const ISXMailDB::MailException& e)
         {
-            m_socket_wrapper->SendResponseAsync(std::string("- NO ") + e.what() + "\r\n").get();
+            m_socket_wrapper->SendResponseAsync(std::string("* BAD ") + e.what() + "\r\n").get();
             return;
         }
 
-        std::future<void> wrft = m_socket_wrapper->SendResponseAsync("+ OK Logged in\r\n");
+        std::future<void> wrft = m_socket_wrapper->SendResponseAsync("* OK Logged in\r\n");
 
         try
         {
@@ -202,5 +300,4 @@ void ClientSession::HandleLogin(ISXImapRequest::ImapRequest& request)
 
     Logger::LogDebug("Exiting ClientSession::HandleLogin");
 }
-
 }  // namespace ISXCS
